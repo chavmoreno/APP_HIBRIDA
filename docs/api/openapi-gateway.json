@@ -1,0 +1,1070 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Stroke Risk - API Gateway",
+    "description": "API pública de la aplicación de predicción de riesgo de derrame cerebral.\n\n**Autenticación:** todas las rutas (salvo `/api/health` y `POST /api/errores`) requieren `Authorization: Bearer <ID token de Firebase>`.\n\n**Trazabilidad:** cada respuesta incluye `X-Request-ID`; puedes enviar el tuyo en la petición.\n\n> Resultado orientativo: no sustituye una valoración médica.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/consultas": {
+      "post": {
+        "tags": [
+          "Consultas"
+        ],
+        "summary": "Crear consulta y obtener la probabilidad de stroke",
+        "description": "Llama al microservicio de inferencia, guarda la consulta en consultas_db y devuelve el resultado.",
+        "operationId": "crear_consulta_api_consultas_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatosPaciente"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Consulta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Correo no verificado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Consultas"
+        ],
+        "summary": "Histórico de consultas del usuario",
+        "description": "Devuelve sólo las consultas del usuario autenticado, de la más reciente a la más antigua.",
+        "operationId": "historico_api_consultas_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Elementos por página",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Elementos por página"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Desplazamiento",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Desplazamiento"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaConsultas"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Correo no verificado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/consultas/{consulta_id}": {
+      "get": {
+        "tags": [
+          "Consultas"
+        ],
+        "summary": "Detalle de una consulta",
+        "description": "404 tanto si no existe como si es de otro usuario (no se revela su existencia).",
+        "operationId": "detalle_api_consultas__consulta_id__get",
+        "parameters": [
+          {
+            "name": "consulta_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Consulta Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Consulta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Correo no verificado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/errores": {
+      "post": {
+        "tags": [
+          "Errores"
+        ],
+        "summary": "Reportar un error de JavaScript del frontend",
+        "description": "No exige sesión (un error puede ocurrir antes del login); si hay token válido se asocia el uid.",
+        "operationId": "reportar_error_api_errores_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorFrontend"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {},
+          {
+            "FirebaseIdToken": []
+          }
+        ]
+      }
+    },
+    "/api/admin/errores": {
+      "get": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Listar errores registrados",
+        "description": "Errores más recientes primero, con filtros opcionales por severidad y origen.",
+        "operationId": "listar_errores_api_admin_errores_get",
+        "parameters": [
+          {
+            "name": "severidad",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "INFO",
+                    "WARNING",
+                    "ERROR",
+                    "CRITICAL"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severidad"
+            }
+          },
+          {
+            "name": "origen",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "gateway",
+                    "inferencia",
+                    "frontend"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Origen"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaErrores"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/errores/resumen": {
+      "get": {
+        "tags": [
+          "Administración"
+        ],
+        "summary": "Conteo de errores por origen y severidad",
+        "description": "Agregado de las últimas N horas (por defecto 24).",
+        "operationId": "resumen_api_admin_errores_resumen_get",
+        "parameters": [
+          {
+            "name": "horas",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 720,
+              "minimum": 1,
+              "default": 24,
+              "title": "Horas"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Resumen Api Admin Errores Resumen Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Salud"
+        ],
+        "summary": "Estado del gateway",
+        "description": "Comprobación de vida usada por Cloudflare / monitoreo.",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Consulta": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "Id en consultas_db (null si no se pudo guardar)"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Creado En"
+          },
+          "datos": {
+            "$ref": "#/components/schemas/DatosPaciente"
+          },
+          "resultado": {
+            "$ref": "#/components/schemas/Resultado"
+          },
+          "guardada": {
+            "type": "boolean",
+            "title": "Guardada",
+            "description": "False si la predicción se hizo pero no se pudo guardar",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "request_id",
+          "creado_en",
+          "datos",
+          "resultado"
+        ],
+        "title": "Consulta",
+        "description": "Consulta guardada en consultas_db (entrada + resultado)."
+      },
+      "DatosPaciente": {
+        "properties": {
+          "gender": {
+            "type": "string",
+            "enum": [
+              "Male",
+              "Female"
+            ],
+            "title": "Gender",
+            "description": "Sexo"
+          },
+          "age": {
+            "type": "number",
+            "maximum": 120.0,
+            "minimum": 0.0,
+            "title": "Age",
+            "description": "Edad en años"
+          },
+          "hypertension": {
+            "type": "boolean",
+            "title": "Hypertension",
+            "description": "¿Tiene hipertensión?"
+          },
+          "heart_disease": {
+            "type": "boolean",
+            "title": "Heart Disease",
+            "description": "¿Tiene alguna enfermedad cardíaca?"
+          },
+          "ever_married": {
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No"
+            ],
+            "title": "Ever Married",
+            "description": "¿Ha estado casado/a alguna vez?"
+          },
+          "work_type": {
+            "type": "string",
+            "enum": [
+              "Private",
+              "Self-employed",
+              "Govt_job",
+              "children",
+              "Never_worked"
+            ],
+            "title": "Work Type"
+          },
+          "residence_type": {
+            "type": "string",
+            "enum": [
+              "Urban",
+              "Rural"
+            ],
+            "title": "Residence Type"
+          },
+          "avg_glucose_level": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 400.0,
+                "minimum": 40.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Glucose Level",
+            "description": "Opcional; se imputa con la mediana"
+          },
+          "bmi": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 10.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bmi",
+            "description": "Opcional; se imputa con la mediana"
+          },
+          "smoking_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "formerly smoked",
+                  "never smoked",
+                  "smokes",
+                  "Unknown"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smoking Status",
+            "description": "Opcional; se imputa con la moda"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "gender",
+          "age",
+          "hypertension",
+          "heart_disease",
+          "ever_married",
+          "work_type",
+          "residence_type"
+        ],
+        "title": "DatosPaciente",
+        "description": "Datos que el usuario captura en la pestaña 'Nueva consulta'.",
+        "example": {
+          "age": 54,
+          "avg_glucose_level": 105.3,
+          "bmi": 27.4,
+          "ever_married": "Yes",
+          "gender": "Female",
+          "heart_disease": false,
+          "hypertension": true,
+          "residence_type": "Urban",
+          "smoking_status": "never smoked",
+          "work_type": "Private"
+        }
+      },
+      "ErrorFrontend": {
+        "properties": {
+          "mensaje": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Mensaje"
+          },
+          "tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tipo",
+            "description": "Nombre del error (TypeError, ...)"
+          },
+          "stack": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stack"
+          },
+          "ruta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruta",
+            "description": "Ruta de la SPA donde ocurrió"
+          },
+          "severidad": {
+            "type": "string",
+            "enum": [
+              "WARNING",
+              "ERROR",
+              "CRITICAL"
+            ],
+            "title": "Severidad",
+            "default": "ERROR"
+          },
+          "contexto": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contexto",
+            "description": "Datos extra (componente, versión, etc.)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mensaje"
+        ],
+        "title": "ErrorFrontend",
+        "description": "Error de JavaScript reportado por la SPA (ErrorBoundary, window.onerror, promesas rechazadas)."
+      },
+      "ErrorRegistrado": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "origen": {
+            "type": "string",
+            "title": "Origen"
+          },
+          "severidad": {
+            "type": "string",
+            "title": "Severidad"
+          },
+          "codigo_http": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codigo Http"
+          },
+          "tipo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tipo"
+          },
+          "mensaje": {
+            "type": "string",
+            "title": "Mensaje"
+          },
+          "ruta": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruta"
+          },
+          "metodo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metodo"
+          },
+          "firebase_uid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firebase Uid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Creado En"
+          },
+          "notificado": {
+            "type": "boolean",
+            "title": "Notificado"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "request_id",
+          "origen",
+          "severidad",
+          "codigo_http",
+          "tipo",
+          "mensaje",
+          "ruta",
+          "metodo",
+          "firebase_uid",
+          "creado_en",
+          "notificado"
+        ],
+        "title": "ErrorRegistrado",
+        "description": "Fila de errores_db expuesta en el panel admin."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "PaginaConsultas": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Consulta"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "items"
+        ],
+        "title": "PaginaConsultas",
+        "description": "Histórico paginado del usuario."
+      },
+      "PaginaErrores": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorRegistrado"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "PaginaErrores"
+      },
+      "RespuestaError": {
+        "properties": {
+          "error": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Error",
+            "example": {
+              "codigo": 401,
+              "mensaje": "Falta el token de autenticación",
+              "request_id": "…"
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "RespuestaError",
+        "description": "Formato uniforme de todas las respuestas de error."
+      },
+      "Resultado": {
+        "properties": {
+          "probabilidad": {
+            "type": "number",
+            "title": "Probabilidad",
+            "description": "Probabilidad calibrada de stroke (0 a 1)"
+          },
+          "clase_predicha": {
+            "type": "integer",
+            "title": "Clase Predicha"
+          },
+          "nivel_riesgo": {
+            "type": "string",
+            "enum": [
+              "bajo",
+              "moderado",
+              "alto"
+            ],
+            "title": "Nivel Riesgo"
+          },
+          "umbral": {
+            "type": "number",
+            "title": "Umbral"
+          },
+          "modelo_version": {
+            "type": "string",
+            "title": "Modelo Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "probabilidad",
+          "clase_predicha",
+          "nivel_riesgo",
+          "umbral",
+          "modelo_version"
+        ],
+        "title": "Resultado",
+        "description": "Resultado del modelo para una consulta."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "FirebaseIdToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "ID token de Firebase Authentication"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Consultas",
+      "description": "Crear consultas y ver el histórico del usuario"
+    },
+    {
+      "name": "Errores",
+      "description": "Reporte de errores del frontend"
+    },
+    {
+      "name": "Administración",
+      "description": "Panel de errores (sólo administradores)"
+    },
+    {
+      "name": "Salud",
+      "description": "Estado del servicio"
+    }
+  ],
+  "servers": [
+    {
+      "url": "https://api.tudominio.com",
+      "description": "Producción (Cloudflare Tunnel)"
+    },
+    {
+      "url": "https://localhost:8000",
+      "description": "Local"
+    }
+  ],
+  "security": [
+    {
+      "FirebaseIdToken": []
+    }
+  ]
+}

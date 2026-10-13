@@ -1,0 +1,118 @@
+/* Estilos globales de la SPA. Paleta sobria con tokens en :root y modo oscuro automático. */
+:root {
+  --fondo: #f5f7fb;
+  --superficie: #ffffff;
+  --texto: #1f2937;
+  --texto-suave: #6b7280;
+  --borde: #e5e7eb;
+  --primario: #2563eb;
+  --primario-hover: #1d4ed8;
+  --peligro: #dc2626;
+  --exito: #16a34a;
+  --riesgo-bajo: #16a34a;
+  --riesgo-moderado: #d97706;
+  --riesgo-alto: #dc2626;
+  --radio: 12px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--texto);
+  background: var(--fondo);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0f172a;
+    --superficie: #1e293b;
+    --texto: #e5e7eb;
+    --texto-suave: #94a3b8;
+    --borde: #334155;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fondo); }
+h1, h2 { margin-top: 0; }
+
+/* ---------- Estructura ---------- */
+.app { max-width: 1100px; margin: 0 auto; padding: 0 16px 32px; }
+.cabecera { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; gap: 12px; flex-wrap: wrap; }
+.marca { font-weight: 700; font-size: 1.2rem; }
+.usuario { display: flex; align-items: center; gap: 12px; color: var(--texto-suave); font-size: 0.9rem; }
+.contenido { margin-top: 16px; }
+.pie { margin-top: 32px; font-size: 0.8rem; color: var(--texto-suave); border-top: 1px solid var(--borde); padding-top: 16px; }
+
+/* ---------- Pestañas ---------- */
+.pestanas { display: flex; gap: 4px; border-bottom: 1px solid var(--borde); }
+.pestana { padding: 10px 18px; text-decoration: none; color: var(--texto-suave); border-bottom: 3px solid transparent; font-weight: 600; }
+.pestana.activa { color: var(--primario); border-bottom-color: var(--primario); }
+
+/* ---------- Tarjetas y formularios ---------- */
+.tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 24px; }
+.dos-columnas { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; align-items: start; }
+.rejilla { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 16px; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; font-weight: 600; }
+input, select { padding: 9px 10px; border: 1px solid var(--borde); border-radius: 8px; font-size: 1rem; background: var(--superficie); color: var(--texto); }
+input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: 1px; }
+.con-error input, .con-error select { border-color: var(--peligro); }
+.con-error small { color: var(--peligro); font-weight: 400; }
+.opcional { color: var(--texto-suave); font-weight: 400; }
+.nota { color: var(--texto-suave); font-size: 0.85rem; }
+.alerta { color: var(--peligro); background: color-mix(in srgb, var(--peligro) 10%, transparent); padding: 10px; border-radius: 8px; }
+.exito { color: var(--exito); background: color-mix(in srgb, var(--exito) 10%, transparent); padding: 10px; border-radius: 8px; }
+.acciones, .acciones-secundarias { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.cargando { color: var(--texto-suave); }
+.vacio { color: var(--texto-suave); }
+
+/* ---------- Botones ---------- */
+.btn { display: inline-block; padding: 10px 18px; border-radius: 8px; border: none; background: var(--primario); color: #fff; font-weight: 600; cursor: pointer; text-decoration: none; font-size: 0.95rem; }
+.btn:hover:not(:disabled) { background: var(--primario-hover); }
+.btn:disabled { opacity: 0.6; cursor: wait; }
+.btn-secundario { background: transparent; color: var(--texto); border: 1px solid var(--borde); }
+.btn-secundario:hover:not(:disabled) { background: var(--borde); }
+.btn-enlace { background: none; color: var(--primario); padding: 4px 0; }
+.btn-enlace:hover:not(:disabled) { background: none; text-decoration: underline; }
+.btn-google { width: 100%; background: var(--superficie); color: var(--texto); border: 1px solid var(--borde); }
+.btn-google:hover:not(:disabled) { background: var(--borde); }
+
+/* ---------- Login ---------- */
+.login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.login .tarjeta { width: 100%; max-width: 420px; }
+.login form { display: flex; flex-direction: column; gap: 12px; }
+.subtitulo { color: var(--texto-suave); }
+.separador { text-align: center; color: var(--texto-suave); font-size: 0.85rem; margin: 16px 0; }
+
+/* ---------- Resultado ---------- */
+.resultado { border-top: 6px solid var(--color-riesgo, var(--primario)); }
+.riesgo-bajo { --color-riesgo: var(--riesgo-bajo); }
+.riesgo-moderado { --color-riesgo: var(--riesgo-moderado); }
+.riesgo-alto { --color-riesgo: var(--riesgo-alto); }
+.probabilidad { font-size: 3rem; font-weight: 800; margin: 8px 0; color: var(--color-riesgo); }
+.barra { height: 12px; border-radius: 6px; background: var(--borde); overflow: hidden; }
+.barra-relleno { height: 100%; background: var(--color-riesgo); }
+
+/* ---------- Tablas ---------- */
+.tabla-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--borde); }
+th { color: var(--texto-suave); font-weight: 600; }
+.detalle dl { display: grid; grid-template-columns: max-content 1fr max-content 1fr; gap: 6px 16px; margin: 0; }
+.detalle dt { color: var(--texto-suave); }
+.detalle dd { margin: 0; }
+.etiqueta { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; color: #fff; background: var(--color-riesgo, var(--texto-suave)); }
+.paginacion { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 16px; }
+.resumen { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.sev-CRITICAL { background: var(--riesgo-alto); }
+.sev-ERROR { background: #ea580c; }
+.sev-WARNING { background: var(--riesgo-moderado); }
+.sev-INFO { background: var(--texto-suave); }
+.filtro { max-width: 200px; margin-bottom: 12px; }
+td.mensaje { max-width: 380px; word-break: break-word; }
+
+/* ---------- Páginas de estado ---------- */
+.pagina-estado { min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; }
+.pagina-estado .codigo { font-size: 5rem; font-weight: 800; color: var(--primario); margin: 0; }
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 800px) {
+  .dos-columnas, .rejilla { grid-template-columns: 1fr; }
+  .detalle dl { grid-template-columns: max-content 1fr; }
+}

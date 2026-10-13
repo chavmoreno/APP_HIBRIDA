@@ -1,0 +1,38 @@
+# ---- Secretos y configuración local (NUNCA subir) ----
+.env
+.env.*
+!.env.example
+**/secrets/
+*.pem
+*.key
+.firebaserc
+cloudflared/*.json
+
+# ---- Pesos del modelo: viven sólo en la máquina local ----
+*.joblib
+!inference-service/models/README.md
+
+# ---- Logs ----
+logs/
+*.log
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# ---- Node / frontend ----
+node_modules/
+dist/
+.firebase/
+
+# ---- Jupyter / Colab ----
+.ipynb_checkpoints/
+
+# ---- SO / editores ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

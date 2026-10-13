@@ -1,0 +1,306 @@
+openapi: 3.1.0
+info:
+  title: Stroke - Microservicio de inferencia
+  description: Servicio interno que calcula la probabilidad de derrame cerebral. Sólo
+    accesible desde el API Gateway.
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      tags:
+      - Salud
+      summary: Estado del servicio
+      description: Indica si el servicio está vivo y si el modelo está cargado.
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Health Health Get
+  /model/info:
+    get:
+      tags:
+      - Modelo
+      summary: Metadatos del modelo
+      description: Versión, algoritmo, umbral, bandas de riesgo y métricas de evaluación
+        del modelo cargado.
+      operationId: info_modelo_model_info_get
+      parameters:
+      - name: x-internal-api-key
+        in: header
+        required: false
+        schema:
+          type: string
+          description: Secreto compartido
+          default: ''
+          title: X-Internal-Api-Key
+        description: Secreto compartido
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfoModelo'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - LlaveInterna: []
+  /predict:
+    post:
+      tags:
+      - Modelo
+      summary: Calcula la probabilidad de stroke
+      description: Recibe las variables clínicas y devuelve probabilidad, clase y
+        nivel de riesgo.
+      operationId: predecir_predict_post
+      parameters:
+      - name: x-internal-api-key
+        in: header
+        required: false
+        schema:
+          type: string
+          description: Secreto compartido
+          default: ''
+          title: X-Internal-Api-Key
+        description: Secreto compartido
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatosPaciente'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoPrediccion'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - LlaveInterna: []
+components:
+  schemas:
+    DatosPaciente:
+      properties:
+        gender:
+          type: string
+          enum:
+          - Male
+          - Female
+          title: Gender
+          description: Sexo
+        age:
+          type: number
+          maximum: 120.0
+          minimum: 0.0
+          title: Age
+          description: Edad en años
+        hypertension:
+          type: boolean
+          title: Hypertension
+          description: ¿Tiene hipertensión?
+        heart_disease:
+          type: boolean
+          title: Heart Disease
+          description: ¿Tiene alguna enfermedad cardíaca?
+        ever_married:
+          type: string
+          enum:
+          - 'Yes'
+          - 'No'
+          title: Ever Married
+          description: ¿Ha estado casado/a alguna vez?
+        work_type:
+          type: string
+          enum:
+          - Private
+          - Self-employed
+          - Govt_job
+          - children
+          - Never_worked
+          title: Work Type
+          description: Tipo de trabajo
+        residence_type:
+          type: string
+          enum:
+          - Urban
+          - Rural
+          title: Residence Type
+          description: Tipo de residencia
+        avg_glucose_level:
+          anyOf:
+          - type: number
+            maximum: 400.0
+            minimum: 40.0
+          - type: 'null'
+          title: Avg Glucose Level
+          description: Glucosa promedio (mg/dL)
+        bmi:
+          anyOf:
+          - type: number
+            maximum: 100.0
+            minimum: 10.0
+          - type: 'null'
+          title: Bmi
+          description: Índice de masa corporal
+        smoking_status:
+          anyOf:
+          - type: string
+            enum:
+            - formerly smoked
+            - never smoked
+            - smokes
+            - Unknown
+          - type: 'null'
+          title: Smoking Status
+          description: Tabaquismo
+      additionalProperties: false
+      type: object
+      required:
+      - gender
+      - age
+      - hypertension
+      - heart_disease
+      - ever_married
+      - work_type
+      - residence_type
+      title: DatosPaciente
+      description: Variables clínicas que usa el modelo. Los valores categóricos siguen
+        el dataset de Kaggle.
+      example:
+        age: 67
+        avg_glucose_level: 228.69
+        bmi: 36.6
+        ever_married: 'Yes'
+        gender: Male
+        heart_disease: true
+        hypertension: false
+        residence_type: Urban
+        smoking_status: formerly smoked
+        work_type: Private
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    InfoModelo:
+      properties:
+        version:
+          type: string
+          title: Version
+        algoritmo:
+          type: string
+          title: Algoritmo
+        umbral:
+          type: number
+          title: Umbral
+        bandas_riesgo:
+          additionalProperties:
+            items:
+              type: number
+            type: array
+          type: object
+          title: Bandas Riesgo
+        metricas:
+          additionalProperties:
+            type: number
+          type: object
+          title: Metricas
+        sklearn_version:
+          type: string
+          title: Sklearn Version
+        entrenado_en:
+          type: string
+          title: Entrenado En
+      type: object
+      required:
+      - version
+      - algoritmo
+      - umbral
+      - bandas_riesgo
+      - metricas
+      - sklearn_version
+      - entrenado_en
+      title: InfoModelo
+      description: Metadatos públicos del modelo cargado.
+    ResultadoPrediccion:
+      properties:
+        probabilidad:
+          type: number
+          title: Probabilidad
+          description: Probabilidad calibrada de stroke (0 a 1)
+        clase_predicha:
+          type: integer
+          title: Clase Predicha
+          description: 1 si la probabilidad supera el umbral del modelo
+        nivel_riesgo:
+          type: string
+          enum:
+          - bajo
+          - moderado
+          - alto
+          title: Nivel Riesgo
+        umbral:
+          type: number
+          title: Umbral
+          description: Umbral de decisión elegido en el entrenamiento
+        modelo_version:
+          type: string
+          title: Modelo Version
+      type: object
+      required:
+      - probabilidad
+      - clase_predicha
+      - nivel_riesgo
+      - umbral
+      - modelo_version
+      title: ResultadoPrediccion
+      description: Respuesta del modelo.
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    LlaveInterna:
+      type: apiKey
+      in: header
+      name: X-Internal-API-Key
+servers:
+- url: https://127.0.0.1:8001
+  description: Sólo loopback (uso interno)

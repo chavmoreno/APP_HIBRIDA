@@ -1,0 +1,11 @@
+# Versiones fijas: scikit-learn DEBE coincidir con la usada en Colab para cargar el .joblib
+scikit-learn==1.6.1
+pandas==2.2.3
+numpy==2.2.6
+joblib==1.4.2
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+pydantic==2.11.4
+pydantic-settings==2.9.1
+SQLAlchemy==2.0.40
+PyMySQL==1.1.1
