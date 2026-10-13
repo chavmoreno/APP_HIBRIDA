@@ -1,0 +1,49 @@
+# =====================================================================
+# Servicios en contenedores de Stroke Risk App.
+# Hoy sólo el microservicio de inferencia corre en Docker; el API Gateway, XAMPP y cloudflared
+# corren directamente en la máquina anfitriona.
+#
+#   docker compose up -d --build     # construir y arrancar
+#   docker compose ps                # estado (incluye healthcheck)
+#   docker compose logs -f inferencia
+#   docker compose restart inferencia   # tras copiar un modelo nuevo
+#   docker compose down              # detener
+# =====================================================================
+name: stroke-app
+
+services:
+  inferencia:
+    build: ./inference-service
+    image: stroke-inferencia:1.0.0
+    container_name: stroke-inferencia
+    env_file: ./inference-service/.env          # INTERNAL_API_KEY, ERRORES_DB_URL, MODEL_PATH
+    environment:                                # Valores propios del contenedor (prevalecen sobre el .env)
+      HOST: 0.0.0.0                             # Dentro del contenedor; hacia fuera sólo se publica en 127.0.0.1
+      PORT: "8001"
+      SSL_CERTFILE: /certs/localhost.pem
+      SSL_KEYFILE: /certs/localhost-key.pem
+      HEALTHCHECK_CA: /certs/rootCA.pem
+    ports:
+      - "127.0.0.1:8001:8001"                   # SOLO loopback: el puerto no queda expuesto a la red
+    volumes:
+      - ./inference-service/models:/app/models:ro   # Model registry local (pesos fuera de la imagen)
+      - ./infra/certs:/certs:ro                     # Certificados TLS de mkcert
+      - inferencia-logs:/app/logs                   # Respaldo rotativo de errores
+    extra_hosts:
+      - "host.docker.internal:host-gateway"     # Acceso a MySQL de XAMPP (necesario en Linux; inocuo en Docker Desktop)
+    restart: unless-stopped                     # Arranca con Docker Desktop y se reinicia si falla
+    read_only: true                             # Sistema de archivos de sólo lectura
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL                                     # Sin capacidades de Linux
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+
+volumes:
+  inferencia-logs:

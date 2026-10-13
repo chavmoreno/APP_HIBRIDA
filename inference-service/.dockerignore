@@ -1,0 +1,14 @@
+# Nada de esto debe terminar dentro de la imagen
+.env
+.env.*
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+tests/
+logs/
+models/
+requirements-dev.txt
+Dockerfile
+.dockerignore
