@@ -13,8 +13,10 @@ flowchart TD
   subgraph LOCAL["Máquina local"]
     MW["Middleware X-Request-ID<br/>+ manejadores de excepciones"]
     API["API Gateway FastAPI :8000"]
-    MS["Microservicio inferencia :8001"]
-    MR["Model registry<br/>model_v1.joblib"]
+    subgraph DOCKER["Docker (contenedor stroke-inferencia)"]
+      MS["Microservicio inferencia :8001<br/>publicado sólo en 127.0.0.1"]
+    end
+    MR["Model registry<br/>models/model_v1.joblib<br/>(volumen de sólo lectura)"]
     subgraph XAMPP["MySQL en XAMPP (solo 127.0.0.1)"]
       DB2[("consultas_db<br/>consultas y resultados")]
       DB4[("errores_db<br/>log de errores")]
@@ -24,7 +26,7 @@ flowchart TD
     API --> MS --> MR
     API --> DB2
     MW -->|"Errores 4xx/5xx<br/>sanitizados"| DB4
-    MS -.->|"Errores de inferencia"| DB4
+    MS -.->|"Errores de inferencia<br/>vía host.docker.internal"| DB4
     MW -.-> FB
   end
   CF --> MW
@@ -41,13 +43,28 @@ flowchart TD
 | Autenticación | Firebase Authentication (correo/contraseña + Google) | GCP | `frontend/src/context/AuthContext.jsx`, `api-gateway/app/auth.py` |
 | Túnel | Cloudflare Tunnel (`cloudflared`) | Máquina local → Cloudflare | `infra/cloudflared/` |
 | API Gateway | FastAPI, uvicorn (TLS) | `https://127.0.0.1:8000` | `api-gateway/` |
-| Microservicio de inferencia | FastAPI, scikit-learn | `https://127.0.0.1:8001` (no publicado) | `inference-service/` |
-| Model registry | Archivos `.joblib` versionados | `inference-service/models/` | — |
+| Microservicio de inferencia | FastAPI, scikit-learn, **contenedor Docker** (`python:3.12-slim`) | `https://127.0.0.1:8001` (puerto publicado sólo en loopback; no pasa por el túnel) | `inference-service/`, `docker-compose.yml` |
+| Model registry | Archivos `.joblib` versionados, montados en el contenedor (sólo lectura) | `inference-service/models/` → `/app/models` | — |
 | `consultas_db` | MySQL/MariaDB (XAMPP) | `127.0.0.1:3306` | `database/01_consultas_db.sql` |
 | `errores_db` | MySQL/MariaDB (XAMPP) | `127.0.0.1:3306` | `database/02_errores_db.sql` |
-| Respaldo de logs | `RotatingFileHandler` (5 × 5 MB) | `*/logs/errores_respaldo.log` | `app/error_logger.py` |
+| Respaldo de logs | `RotatingFileHandler` (5 × 5 MB) | Gateway: `api-gateway/logs/`; inferencia: volumen Docker `inferencia-logs` | `app/error_logger.py` |
 | Panel admin / alertas | Ruta `/admin` + worker `app.alertas` | Local | `api-gateway/app/routers/admin.py`, `app/alertas.py` |
 | Entrenamiento | Notebook Colab + `kagglehub` | Google Colab | `ml/` |
+
+### 2.1 Despliegue en la máquina local
+
+| Proceso | Cómo corre | Escucha en |
+|---|---|---|
+| MySQL (MariaDB de XAMPP) | Panel de XAMPP | `127.0.0.1:3306` |
+| Microservicio de inferencia | `docker compose up -d` (Docker Desktop), `restart: unless-stopped` | `127.0.0.1:8001` → contenedor `:8001` |
+| API Gateway | `python run.py` (entorno virtual) | `127.0.0.1:8000` |
+| Worker de alertas | `python -m app.alertas` | — |
+| Cloudflare Tunnel | `cloudflared tunnel run stroke-api` | Conexión saliente a Cloudflare |
+
+El contenedor monta tres cosas del disco: `inference-service/models/` (pesos, sólo lectura),
+`infra/certs/` (TLS, sólo lectura) y el volumen `inferencia-logs` (respaldo de errores). Llega a MySQL de
+XAMPP como `host.docker.internal`. El healthcheck de Docker consulta `/health` por HTTPS y marca el
+contenedor `unhealthy` si el modelo no está cargado.
 
 ## 3. Flujos principales
 
@@ -84,7 +101,7 @@ sequenceDiagram
 | Gateway — validación 422 | Manejador global; **sólo nombres de campo**, nunca valores (datos de salud) | `WARNING` |
 | Gateway — excepción no controlada | Manejador global con stack trace; al cliente sólo `request_id` | `ERROR` |
 | Gateway — inferencia caída | Ruta `/api/consultas` | `CRITICAL` → alerta |
-| Inferencia — fallo al cargar modelo | `lifespan` | `CRITICAL` → alerta |
+| Inferencia — fallo al cargar modelo | `lifespan` (además, el contenedor queda `unhealthy`) | `CRITICAL` → alerta |
 | Inferencia — excepción al predecir | Manejador global | `ERROR` |
 | Frontend — `ErrorBoundary`, `window.onerror`, `unhandledrejection` | `POST /api/errores` (límite 30/min por IP y 20 por sesión) | `ERROR` |
 
@@ -95,8 +112,9 @@ las envía por Telegram y/o correo (SMTP con STARTTLS) y las marca como notifica
 
 1. Abrir `ml/stroke_prediction_colab.ipynb` en Colab → *Ejecutar todo*.
 2. El notebook lee el dataset de Kaggle con `kagglehub` (sin descarga manual), hace EDA, preprocesa, compara modelos, calibra y exporta `model_v1.joblib`.
-3. Copiar el `.joblib` a `inference-service/models/` y reiniciar el microservicio.
-4. Nueva versión → `model_v2.joblib` + cambiar `MODEL_PATH`. Cada consulta guarda `modelo_version`.
+3. Copiar el `.joblib` a `inference-service/models/` y reiniciar el contenedor (`docker compose restart inferencia`).
+4. Nueva versión → `model_v2.joblib` + cambiar `MODEL_PATH` en `inference-service/.env` + `docker compose up -d`.
+   No hace falta reconstruir la imagen: los pesos no están dentro. Cada consulta guarda `modelo_version`.
 
 Detalle del modelo: [`modelo.md`](modelo.md).
 
@@ -104,10 +122,11 @@ Detalle del modelo: [`modelo.md`](modelo.md).
 
 | Control | Implementación |
 |---|---|
-| **HTTPS exclusivo** | Firebase Hosting sólo sirve HTTPS + HSTS (`firebase.json`). Cloudflare termina TLS público. Gateway e inferencia arrancan **sólo** con certificado (`run.py` aborta sin él). Gateway → inferencia y Cloudflare → gateway verifican el certificado con la CA de mkcert (nunca `verify=False`/`noTLSVerify`). El frontend rechaza una `VITE_API_URL` que no sea `https://` y redirige `http:` → `https:`. |
+| **HTTPS exclusivo** | Firebase Hosting sólo sirve HTTPS + HSTS (`firebase.json`). Cloudflare termina TLS público. Gateway e inferencia (también dentro del contenedor) arrancan **sólo** con certificado (`run.py` aborta sin él); el healthcheck de Docker también verifica el certificado. Gateway → inferencia y Cloudflare → gateway verifican el certificado con la CA de mkcert (nunca `verify=False`/`noTLSVerify`). El frontend rechaza una `VITE_API_URL` que no sea `https://` y redirige `http:` → `https:`. |
 | Autenticación | ID token de Firebase verificado en cada petición (firma, expiración, audiencia, **revocación**). Cuentas de correo deben verificar el email. |
 | Autorización | Las consultas siempre se filtran por el `uid` del token (un usuario nunca ve consultas ajenas; 404 en vez de 403 para no revelar existencia). Panel admin restringido a `ADMIN_EMAILS` con email verificado. |
-| Superficie expuesta | Sólo el gateway se publica (vía túnel, sin abrir puertos). Inferencia y MySQL escuchan en `127.0.0.1`. `TrustedHostMiddleware` rechaza Host inesperados. |
+| Superficie expuesta | Sólo el gateway se publica (vía túnel, sin abrir puertos). El puerto del contenedor de inferencia se publica sólo en `127.0.0.1` y MySQL escucha en `127.0.0.1`. `TrustedHostMiddleware` rechaza Host inesperados. |
+| Contenedor | Usuario sin privilegios (uid 10001), sistema de archivos de sólo lectura, `cap_drop: ALL`, `no-new-privileges`, límites de CPU/RAM, imagen sin secretos ni pesos (`.dockerignore`), versión de Python fijada. |
 | Servicio a servicio | `X-Internal-API-Key` comparada en tiempo constante. |
 | Base de datos | Usuarios con privilegios mínimos (`app_errores` sólo `INSERT`; `app_errores_admin` sólo `SELECT` + `UPDATE(notificado)`). Consultas parametrizadas (SQLAlchemy `text()` con parámetros). |
 | Cabeceras | HSTS, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, CSP, `Cache-Control: no-store` en la API. |
@@ -161,6 +180,9 @@ Detalle del modelo: [`modelo.md`](modelo.md).
 | Decisión | Motivo |
 |---|---|
 | Gateway + microservicio separados | El modelo (scikit-learn, pandas) se actualiza y escala por separado; el gateway no carga dependencias de ML. |
+| Inferencia en Docker | Fija Python y scikit-learn (un `.joblib` sólo carga bien con la misma versión con la que se entrenó), arranca solo con Docker Desktop, se reinicia si falla y queda aislado del resto del sistema. |
+| Pesos fuera de la imagen | Cambiar de modelo es copiar un archivo y reiniciar; la imagen no cambia y los pesos no se distribuyen con ella. |
+| Gateway fuera de Docker | Necesita la cuenta de servicio de Firebase, el túnel y XAMPP locales; dejarlo nativo simplifica la operación diaria. Se puede contenerizar más adelante con el mismo patrón. |
 | Pipeline completo dentro del `.joblib` | La imputación (mediana/moda), el escalado y el one-hot de producción son idénticos a los del entrenamiento. |
 | Probabilidades calibradas | La app muestra una *probabilidad*; los pesos de clase la distorsionan y la calibración la corrige. |
 | Guardar consulta aunque falle MySQL | La predicción se muestra igualmente (`guardada: false`) y el fallo queda en el log. |

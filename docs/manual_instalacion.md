@@ -7,9 +7,10 @@ que es donde normalmente corre XAMPP; las variantes de macOS/Linux van entre par
 
 | Herramienta | Versión | Para qué |
 |---|---|---|
-| Python | 3.11 – 3.13 | Gateway e inferencia |
+| Python | 3.11 – 3.13 | API Gateway (la inferencia trae su propio Python en la imagen Docker) |
+| Docker Desktop | 4.x (Windows: con backend WSL2) | Microservicio de inferencia en contenedor |
 | Node.js | 20+ | Construir el frontend |
-| XAMPP | 8.x (MariaDB 10.4+) | `consultas_db` y `errores_db` |
+| XAMPP | 7.4+ / 8.x (MariaDB 10.4+) | `consultas_db` y `errores_db` |
 | mkcert | 1.4+ | Certificados HTTPS locales |
 | cloudflared | reciente | Cloudflare Tunnel |
 | Firebase CLI | `npm i -g firebase-tools` | Desplegar el frontend |
@@ -65,23 +66,67 @@ Copy-Item "$(mkcert -CAROOT)\rootCA.pem" .     # (cp "$(mkcert -CAROOT)/rootCA.p
 5. **Configuración del proyecto → Cuentas de servicio → Generar nueva clave privada**: guarda el JSON como
    `api-gateway/secrets/firebase-service-account.json` (carpeta ignorada por git; **no lo compartas**).
 
-## 5. Microservicio de inferencia
+## 5. Microservicio de inferencia (Docker)
 
-```powershell
-cd inference-service
-python -m venv .venv
-.venv\Scripts\activate            # (source .venv/bin/activate)
-pip install -r requirements.txt
-Copy-Item .env.example .env       # (cp .env.example .env)
-```
+El microservicio corre en un contenedor Docker. La imagen fija Python 3.12 y `scikit-learn==1.6.1`,
+así el `.joblib` de Colab siempre carga con la versión correcta. Los pesos **no** van dentro de la imagen:
+`inference-service/models/` se monta como volumen de sólo lectura.
 
-Edita `.env`: `INTERNAL_API_KEY` (genera con `python -c "import secrets; print(secrets.token_urlsafe(32))"`)
-y la contraseña de `app_errores` en `ERRORES_DB_URL`. Arranca:
+1. Instala y abre **Docker Desktop**: [docs.docker.com/desktop](https://docs.docker.com/desktop/)
+   (Windows: backend WSL2). Actívalo en *Settings → General → Start Docker Desktop when you sign in*
+   para que la inferencia arranque sola con Windows.
+2. Configura el servicio:
+   ```powershell
+   cd inference-service
+   Copy-Item .env.example .env       # (cp .env.example .env)
+   ```
+   Edita `.env`: `INTERNAL_API_KEY` (genera con `python -c "import secrets; print(secrets.token_urlsafe(32))"`)
+   y la contraseña de `app_errores` en `ERRORES_DB_URL`. Deja el host como `host.docker.internal`.
+3. Comprueba que existen `inference-service/models/model_v1.joblib` (paso 1) y los certificados de `infra/certs/` (paso 3).
+   En **Linux**, da permiso de lectura de la llave al contenedor: `sudo chgrp 10001 infra/certs/localhost-key.pem && chmod 640 infra/certs/localhost-key.pem`.
+4. Construye y arranca desde la raíz del repositorio:
+   ```powershell
+   cd ..
+   docker compose up -d --build
+   docker compose ps          # Debe decir "Up … (healthy)" y 127.0.0.1:8001->8001/tcp
+   curl.exe https://127.0.0.1:8001/health   # → {"estado":"ok","modelo_cargado":true}
+   ```
 
-```powershell
-python run.py
-# Comprobar:  curl.exe https://127.0.0.1:8001/health   →  {"estado":"ok","modelo_cargado":true}
-```
+| Tarea | Comando (desde la raíz) |
+|---|---|
+| Ver logs | `docker compose logs -f inferencia` |
+| Reiniciar tras reemplazar el `.joblib` (mismo nombre) | `docker compose restart inferencia` |
+| Aplicar cambios del `.env` (p. ej. `MODEL_PATH=models/model_v2.joblib`) | `docker compose up -d` |
+| Reconstruir tras cambiar código o `requirements.txt` | `docker compose up -d --build` |
+| Ver el respaldo de errores (si MySQL falló) | `docker compose exec inferencia cat logs/errores_respaldo.log` |
+| Detener | `docker compose down` |
+
+Seguridad del contenedor: publica el puerto **sólo** en `127.0.0.1` (no es accesible desde la red), corre como
+usuario sin privilegios, con sistema de archivos de sólo lectura, sin capacidades de Linux y con
+`no-new-privileges`; límite de 1 CPU y 1 GB de RAM; `restart: unless-stopped`.
+
+### 5.1 Docker y MySQL de XAMPP
+
+Desde el contenedor, la máquina anfitriona se llama `host.docker.internal` (no `127.0.0.1`).
+
+- **Windows / macOS (Docker Desktop):** normalmente no hay que tocar nada: Docker Desktop reenvía la
+  conexión desde la propia máquina y el usuario `app_errores@127.0.0.1` sirve. Si
+  `docker compose logs inferencia` o el respaldo de errores muestran
+  `Host 'X.X.X.X' is not allowed to connect`, ejecuta `database/04_usuario_docker.sql` cambiando `'172.%'`
+  por la red de esa IP (p. ej. `'192.168.65.%'`).
+- **Linux (Docker Engine):** el contenedor llega desde la red puente de Docker (`172.x`). Ejecuta
+  `database/04_usuario_docker.sql` y haz que MariaDB escuche también en esa interfaz
+  (`bind-address=0.0.0.0` en `my.cnf`) **bloqueando el puerto 3306 desde fuera** con el firewall
+  (p. ej. `sudo ufw deny 3306` y `sudo ufw allow from 172.16.0.0/12 to any port 3306`).
+
+Si MySQL no está disponible, los errores del microservicio no se pierden: van al archivo rotativo del
+volumen Docker `inferencia-logs`.
+
+### 5.2 (Alternativa) Ejecutarlo sin Docker
+
+Para depurar puedes correrlo directamente: `python -m venv .venv`, `pip install -r requirements.txt`,
+cambia en `.env` el host de `ERRORES_DB_URL` a `127.0.0.1` y ejecuta `python run.py`
+(usa por defecto los certificados de `../infra/certs/`). Detén antes el contenedor (`docker compose down`): ambos usan el puerto 8001.
 
 ## 6. API Gateway
 
@@ -151,30 +196,38 @@ npm run deploy                # build + firebase deploy --only hosting
 
 ## 9. Arranque diario
 
-- Windows: `scripts\iniciar_windows.bat` (abre inferencia, gateway, alertas y túnel en ventanas separadas).
-- macOS/Linux: `scripts/iniciar.sh`.
+Antes, inicia MySQL en el panel de XAMPP y abre Docker Desktop.
 
-Antes, inicia MySQL en el panel de XAMPP.
+- Windows: `scripts\iniciar_windows.bat` (levanta el contenedor de inferencia con `docker compose up -d`
+  y abre gateway, alertas y túnel en ventanas separadas).
+- macOS/Linux: `scripts/iniciar.sh` (espera a que el contenedor esté `healthy` antes de arrancar el gateway).
+
+Con `restart: unless-stopped`, el contenedor vuelve a arrancar solo cuando se inicia Docker Desktop.
 
 ## 10. Pruebas automatizadas
 
 ```powershell
-cd inference-service; pip install -r requirements-dev.txt; pytest
+cd inference-service; python -m venv .venv; .venv\Scripts\activate; pip install -r requirements-dev.txt; pytest
 cd ..\api-gateway;    pip install -r requirements-dev.txt; pytest
 ```
 
-No necesitan Firebase, MySQL ni el modelo real (se simulan).
+No necesitan Firebase, MySQL, Docker ni el modelo real (se simulan). Las pruebas de la inferencia
+usan un entorno virtual local aparte del contenedor.
 
 ## 11. Solución de problemas
 
 | Síntoma | Causa probable / solución |
 |---|---|
-| `Falta el certificado TLS` al arrancar | Repite el paso 3; revisa `SSL_CERTFILE`/`SSL_KEYFILE`. |
-| 503 "servicio de predicción no disponible" | La inferencia no está corriendo, `INTERNAL_API_KEY` distinta, o `INFERENCE_CA_BUNDLE` no apunta a `rootCA.pem`. Mira `errores_db` o `logs/errores_respaldo.log`. |
-| `/health` de inferencia dice `degradado` | No encuentra `models/model_v1.joblib` o la versión de scikit-learn no coincide. |
+| `Falta el certificado TLS` al arrancar | Repite el paso 3; revisa `SSL_CERTFILE`/`SSL_KEYFILE` (gateway) o que `infra/certs/` tenga los 3 archivos (contenedor). |
+| Contenedor reiniciándose: `Sin permiso de lectura sobre '/certs/localhost-key.pem'` | Sólo Linux: `sudo chgrp 10001 infra/certs/localhost-key.pem && chmod 640 infra/certs/localhost-key.pem`. |
+| `docker compose` no responde / `cannot connect to the Docker daemon` | Docker Desktop no está abierto. |
+| `port is already allocated` en el 8001 | Hay un `python run.py` de la inferencia corriendo fuera de Docker; deténlo. |
+| 503 "servicio de predicción no disponible" | El contenedor no está `healthy` (`docker compose ps`), `INTERNAL_API_KEY` distinta en los dos `.env`, o `INFERENCE_CA_BUNDLE` no apunta a `rootCA.pem`. Mira `errores_db` o `docker compose logs inferencia`. |
+| Contenedor `unhealthy` / `/health` dice `degradado` | No encuentra el `.joblib` de `MODEL_PATH` en `inference-service/models/`. |
+| Errores de la inferencia no llegan a `errores_db` | Ver 5.1 (`host.docker.internal`, `04_usuario_docker.sql`). Revisa `docker compose exec inferencia cat logs/errores_respaldo.log`: el campo `fallo_db` dice por qué falló MySQL. |
 | 401 en todas las peticiones | `FIREBASE_PROJECT_ID` o cuenta de servicio de otro proyecto; reloj del PC desajustado. |
 | 403 "verifica tu correo" | La cuenta de correo no abrió el enlace de verificación. |
 | Error CORS en el navegador | Falta el origen exacto (con `https://`) en `CORS_ORIGINS`. |
 | 400 "Invalid host header" | Agrega el dominio del túnel a `ALLOWED_HOSTS`. |
 | Login con Google bloqueado | Dominio no autorizado en Firebase o CSP de `firebase.json` sin los dominios necesarios. |
-| Errores no aparecen en `errores_db` | Revisa `logs/errores_respaldo.log` (el campo `fallo_db` dice por qué falló MySQL). |
+| Errores del gateway no aparecen en `errores_db` | Revisa `api-gateway/logs/errores_respaldo.log` (el campo `fallo_db` dice por qué falló MySQL). |

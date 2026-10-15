@@ -6,8 +6,9 @@
 #   docker compose up -d --build     # construir y arrancar
 #   docker compose ps                # estado (incluye healthcheck)
 #   docker compose logs -f inferencia
-#   docker compose restart inferencia   # tras copiar un modelo nuevo
-#   docker compose down              # detener
+#   docker compose restart inferencia   # tras reemplazar el .joblib con el MISMO nombre
+#   docker compose up -d                # tras cambiar MODEL_PATH u otra variable del .env (recrea el contenedor)
+#   docker compose down              # detener (el volumen de logs se conserva)
 # =====================================================================
 name: stroke-app
 

@@ -5,8 +5,8 @@ Guía para agentes (Claude Code) que trabajen en este repositorio.
 ## Qué es
 
 App web de predicción de riesgo de stroke. SPA React en Firebase Hosting → Cloudflare Tunnel → API Gateway
-FastAPI local (:8000) → microservicio de inferencia FastAPI local (:8001) con un pipeline scikit-learn
-entrenado en Colab. MySQL de XAMPP guarda consultas (`consultas_db`) y errores (`errores_db`).
+FastAPI local (:8000, nativo) → microservicio de inferencia FastAPI (:8001) **en un contenedor Docker** con un
+pipeline scikit-learn entrenado en Colab. MySQL de XAMPP (MariaDB) guarda consultas (`consultas_db`) y errores (`errores_db`).
 Arquitectura completa: `docs/arquitectura.md`.
 
 ## Mapa del código
@@ -16,6 +16,7 @@ Arquitectura completa: `docs/arquitectura.md`.
 | `ml/stroke_prediction_colab.py` | **Fuente de verdad** del notebook (formato percent `# %%`) |
 | `ml/stroke_prediction_colab.ipynb` | Generado: `python ml/tools/py_to_ipynb.py ml/stroke_prediction_colab.py ml/stroke_prediction_colab.ipynb` |
 | `inference-service/app/` | `main.py` (rutas), `model_loader.py` (traduce API → columnas del dataset), `schemas.py`, `error_logger.py` |
+| `inference-service/Dockerfile`, `healthcheck.py`, `docker-compose.yml` (raíz) | Imagen y despliegue del microservicio |
 | `api-gateway/app/` | `main.py`, `middleware.py` (X-Request-ID, cabeceras, manejadores de excepciones), `auth.py` (Firebase), `db.py`, `inferencia.py`, `routers/`, `alertas.py` |
 | `frontend/src/` | `pages/`, `components/` (ErrorBoundary, ProtectedRoute, Layout), `services/api.js`, `context/AuthContext.jsx` |
 | `database/*.sql` | Esquemas y usuarios MySQL |
@@ -29,6 +30,8 @@ cd inference-service && pytest
 cd api-gateway && pytest
 # Frontend
 cd frontend && npm run build
+# Inferencia en Docker (desde la raíz)
+docker compose up -d --build && docker compose ps   # debe quedar "healthy"
 # Regenerar notebook y Swagger tras cambiar código
 python ml/tools/py_to_ipynb.py ml/stroke_prediction_colab.py ml/stroke_prediction_colab.ipynb
 python scripts/exportar_openapi.py
@@ -56,3 +59,7 @@ STROKE_CSV=/ruta/stroke.csv MPLBACKEND=Agg python ml/stroke_prediction_colab.py
 6. Nunca registrar valores clínicos, tokens ni IPs en claro en `errores_db` (usar `sanitizar` / `hash_ip`).
 7. `api-gateway/app/error_logger.py` e `inference-service/app/error_logger.py` son copias idénticas (servicios desplegables por separado): mantenlas sincronizadas.
 8. Nunca subir `.env`, `secrets/`, `*.pem`, `*.joblib`.
+9. Docker: los pesos y certificados se **montan** (nunca `COPY` a la imagen); el puerto se publica sólo como
+   `127.0.0.1:8001:8001`; el contenedor corre como uid 10001 con `read_only`, `cap_drop: ALL` y `no-new-privileges`.
+   Valores propios del contenedor (HOST, PORT, rutas `/certs`) van en `environment:` de `docker-compose.yml` para que el `.env` no los pise.
+10. Desde el contenedor, XAMPP es `host.docker.internal`, no `127.0.0.1`.
