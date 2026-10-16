@@ -1,0 +1,64 @@
+{
+  "version": "v1",
+  "algoritmo": "regresion_logistica",
+  "umbral": 0.1714724260710511,
+  "bandas_riesgo": {
+    "bajo": [
+      0.0,
+      0.05
+    ],
+    "moderado": [
+      0.05,
+      0.15
+    ],
+    "alto": [
+      0.15,
+      1.0
+    ]
+  },
+  "columnas_numericas": [
+    "age",
+    "avg_glucose_level",
+    "bmi"
+  ],
+  "columnas_categoricas": [
+    "gender",
+    "hypertension",
+    "heart_disease",
+    "ever_married",
+    "work_type",
+    "Residence_type",
+    "smoking_status"
+  ],
+  "tratar_unknown_como_nulo": true,
+  "metricas": {
+    "roc_auc": 0.8387242798353909,
+    "pr_auc": 0.2648958332460307,
+    "brier": 0.04089767116576213,
+    "f1_umbral": 0.3548387096774194,
+    "umbral": 0.1714724260710511,
+    "prevalencia_test": 0.04892367906066536
+  },
+  "sklearn_version": "1.6.1",
+  "entrenado_en": "2026-10-16T00:20:11.876284+00:00",
+  "comparacion_cv": [
+    {
+      "modelo": "regresion_logistica",
+      "roc_auc_media": 0.8388521135757638,
+      "roc_auc_std": 0.019016796127115737,
+      "pr_auc_media": 0.19410029558916167
+    },
+    {
+      "modelo": "random_forest",
+      "roc_auc_media": 0.8290244761838592,
+      "roc_auc_std": 0.023453057662995793,
+      "pr_auc_media": 0.1643513483305501
+    },
+    {
+      "modelo": "hist_gradient_boosting",
+      "roc_auc_media": 0.8235365933887785,
+      "roc_auc_std": 0.03778583584666796,
+      "pr_auc_media": 0.1787290346484676
+    }
+  ]
+}
