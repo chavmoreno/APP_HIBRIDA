@@ -38,6 +38,13 @@ que es donde normalmente corre XAMPP; las variantes de macOS/Linux van entre par
    bind-address=127.0.0.1
    ```
    Reinicia MySQL. Pon contraseña a `root` si no tiene (phpMyAdmin → *Cuentas de usuario*).
+
+   **Atajo / si MySQL deja de arrancar tras editar `my.ini`:** con MySQL detenido, ejecuta desde la raíz del proyecto
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts\configurar_xampp_mysql.ps1
+   ```
+   Hace copia de seguridad de `my.ini`, quita líneas `bind-address` mal escritas o en la sección equivocada,
+   deja una sola `bind-address=127.0.0.1` debajo de `[mysqld]` y muestra los últimos errores de `mysql_error.log`.
 3. Edita `database/03_usuarios.sql` y cambia cada `cambia-esta-clave` por contraseñas fuertes.
 4. Ejecuta los scripts en orden (phpMyAdmin → pestaña SQL, o consola):
    ```powershell
@@ -222,6 +229,7 @@ usan un entorno virtual local aparte del contenedor.
 |---|---|
 | `Falta el certificado TLS` al arrancar | Repite el paso 3; revisa `SSL_CERTFILE`/`SSL_KEYFILE` (gateway) o que `infra/certs/` tenga los 3 archivos (contenedor). |
 | Contenedor reiniciándose: `Sin permiso de lectura sobre '/certs/localhost-key.pem'` | Sólo Linux: `sudo chgrp 10001 infra/certs/localhost-key.pem && chmod 640 infra/certs/localhost-key.pem`. |
+| XAMPP: `MySQL shutdown unexpectedly` tras editar `my.ini` | Ejecuta `scripts\configurar_xampp_mysql.ps1` (paso 2.2) y vuelve a pulsar *Start*. Si sigue fallando, revisa las líneas `[ERROR]` que muestra. |
 | `docker compose` no responde / `cannot connect to the Docker daemon` | Docker Desktop no está abierto. |
 | `port is already allocated` en el 8001 | Hay un `python run.py` de la inferencia corriendo fuera de Docker; deténlo. |
 | 503 "servicio de predicción no disponible" | El contenedor no está `healthy` (`docker compose ps`), `INTERNAL_API_KEY` distinta en los dos `.env`, o `INFERENCE_CA_BUNDLE` no apunta a `rootCA.pem`. Mira `errores_db` o `docker compose logs inferencia`. |
