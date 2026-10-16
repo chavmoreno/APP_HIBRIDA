@@ -1,50 +1,121 @@
 # =====================================================================
-# Servicios en contenedores de Stroke Risk App.
-# Hoy sólo el microservicio de inferencia corre en Docker; el API Gateway, XAMPP y cloudflared
-# corren directamente en la máquina anfitriona.
+# Servicios de Stroke Risk App en la VM de Oracle Cloud (Always Free, Ampere A1 / ARM).
+# Fuera de Docker sólo queda MySQL de XAMPP (en el PC de casa), alcanzable en 127.0.0.1:3306 de la VM gracias al
+# túnel SSH inverso que abre el PC.
+#
+# Red: network_mode "host". Gateway, inferencia y alertas escuchan SÓLO en 127.0.0.1 y comparten el loopback de la VM
+# con el túnel de MySQL. Lo único público es Caddy (80/443), que pone HTTPS de Let's Encrypt para el dominio de DuckDNS.
+# El dominio y el correo de Let's Encrypt van en el archivo .env de la raíz (DOMINIO, ACME_EMAIL).
 #
 #   docker compose up -d --build     # construir y arrancar
-#   docker compose ps                # estado (incluye healthcheck)
-#   docker compose logs -f inferencia
+#   docker compose ps                # estado (la inferencia tiene healthcheck)
+#   docker compose logs -f gateway
 #   docker compose restart inferencia   # tras reemplazar el .joblib con el MISMO nombre
-#   docker compose up -d                # tras cambiar MODEL_PATH u otra variable del .env (recrea el contenedor)
-#   docker compose down              # detener (el volumen de logs se conserva)
+#   docker compose up -d                # tras cambiar una variable de los .env (recrea los contenedores)
+#   docker compose down              # detener (los volúmenes de logs se conservan)
 # =====================================================================
 name: stroke-app
 
+# Endurecimiento común a los tres contenedores
+x-seguro: &seguro
+  network_mode: host
+  restart: unless-stopped                       # Arrancan con la VM y se reinician si fallan
+  read_only: true                               # Sistema de archivos de sólo lectura
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL                                       # Sin capacidades de Linux
+  security_opt:
+    - no-new-privileges:true
+
 services:
   inferencia:
+    <<: *seguro
     build: ./inference-service
-    image: stroke-inferencia:1.0.0
+    image: stroke-inferencia:1.1.0
     container_name: stroke-inferencia
     env_file: ./inference-service/.env          # INTERNAL_API_KEY, ERRORES_DB_URL, MODEL_PATH
     environment:                                # Valores propios del contenedor (prevalecen sobre el .env)
-      HOST: 0.0.0.0                             # Dentro del contenedor; hacia fuera sólo se publica en 127.0.0.1
+      HOST: 127.0.0.1                           # Red del host: sólo loopback de la VM
       PORT: "8001"
       SSL_CERTFILE: /certs/localhost.pem
       SSL_KEYFILE: /certs/localhost-key.pem
       HEALTHCHECK_CA: /certs/rootCA.pem
-    ports:
-      - "127.0.0.1:8001:8001"                   # SOLO loopback: el puerto no queda expuesto a la red
     volumes:
-      - ./inference-service/models:/app/models:ro   # Model registry local (pesos fuera de la imagen)
-      - ./infra/certs:/certs:ro                     # Certificados TLS de mkcert
+      - ./inference-service/models:/app/models:ro   # Model registry (pesos fuera de la imagen)
+      - ./infra/certs:/certs:ro                     # Certificados TLS internos (los genera infra/oracle/instalar_vm.sh)
       - inferencia-logs:/app/logs                   # Respaldo rotativo de errores
-    extra_hosts:
-      - "host.docker.internal:host-gateway"     # Acceso a MySQL de XAMPP (necesario en Linux; inocuo en Docker Desktop)
-    restart: unless-stopped                     # Arranca con Docker Desktop y se reinicia si falla
-    read_only: true                             # Sistema de archivos de sólo lectura
-    tmpfs:
-      - /tmp
-    cap_drop:
-      - ALL                                     # Sin capacidades de Linux
-    security_opt:
-      - no-new-privileges:true
     deploy:
       resources:
         limits:
           cpus: "1.0"
           memory: 1g
 
+  gateway:
+    <<: *seguro
+    build: ./api-gateway
+    image: stroke-gateway:1.0.0
+    container_name: stroke-gateway
+    env_file: ./api-gateway/.env                # Firebase, CORS, bases de datos, llave interna, alertas
+    environment:
+      HOST: 127.0.0.1                           # Sólo loopback: Caddy lo publica
+      PORT: "8000"
+      SSL_CERTFILE: /certs/localhost.pem
+      SSL_KEYFILE: /certs/localhost-key.pem
+      INFERENCE_URL: https://127.0.0.1:8001
+      INFERENCE_CA_BUNDLE: /certs/rootCA.pem
+      FIREBASE_CREDENTIALS: secrets/firebase-service-account.json
+      LOG_FALLBACK_PATH: logs/errores_respaldo.log
+    volumes:
+      - ./api-gateway/secrets:/app/secrets:ro   # Cuenta de servicio de Firebase
+      - ./infra/certs:/certs:ro
+      - gateway-logs:/app/logs
+    depends_on:
+      inferencia:
+        condition: service_healthy              # No acepta consultas hasta que el modelo esté cargado
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
+
+  alertas:
+    <<: *seguro
+    build: ./api-gateway                        # Misma imagen que el gateway (la 2.ª construcción sale de caché)
+    image: stroke-gateway:1.0.0
+    container_name: stroke-alertas
+    command: ["python", "-m", "app.alertas"]
+    env_file: ./api-gateway/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
+
+  caddy:
+    <<: *seguro
+    image: caddy:2.10.0-alpine
+    container_name: stroke-caddy
+    cap_add:
+      - NET_BIND_SERVICE                        # Única capacidad: abrir los puertos 80 y 443
+    environment:
+      DOMINIO: ${DOMINIO:?Falta DOMINIO en el .env de la raíz}
+      ACME_EMAIL: ${ACME_EMAIL:?Falta ACME_EMAIL en el .env de la raíz}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/certs/rootCA.pem:/certs/rootCA.pem:ro   # Para verificar el certificado interno del gateway
+      - caddy-data:/data                        # Certificados de Let's Encrypt (no perderlos evita límites de emisión)
+      - caddy-config:/config
+    depends_on:
+      - gateway
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128m
+
 volumes:
   inferencia-logs:
+  gateway-logs:
+  caddy-data:
+  caddy-config:

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    # Servidor (sólo HTTPS; Cloudflare Tunnel publica este puerto en api.tudominio.com)
+    # Servidor (sólo HTTPS; Caddy publica este puerto en tu-app.duckdns.org)
     host: str = "127.0.0.1"
     port: int = 8000
     ssl_certfile: str = "../infra/certs/localhost.pem"
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     # Microservicio de inferencia
     inference_url: str = "https://127.0.0.1:8001"
-    inference_ca_bundle: str = "../infra/certs/rootCA.pem"  # CA de mkcert para validar el TLS local
+    inference_ca_bundle: str = "../infra/certs/rootCA.pem"  # CA interna para validar el TLS de la inferencia
     inference_timeout: float = 5.0
     internal_api_key: str = ""
 

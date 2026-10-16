@@ -31,8 +31,9 @@ RUN mkdir -p /app/models /app/logs /certs && chown app:app /app/logs
 
 USER app
 
-# Valores propios del contenedor (docker-compose.yml los vuelve a fijar para que el .env no los pise)
-ENV HOST=0.0.0.0 \
+# Valores propios del contenedor (docker-compose.yml los vuelve a fijar para que el .env no los pise).
+# Con network_mode "host" el contenedor comparte la red de la VM: sólo loopback.
+ENV HOST=127.0.0.1 \
     PORT=8001 \
     SSL_CERTFILE=/certs/localhost.pem \
     SSL_KEYFILE=/certs/localhost-key.pem \

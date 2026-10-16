@@ -1,8 +1,9 @@
 -- =====================================================================
 -- Usuarios de aplicación con privilegios mínimos (nunca usar root desde la app).
 -- ANTES DE EJECUTAR: reemplaza cada 'cambia-esta-clave' por una contraseña fuerte distinta
--- y usa las mismas en los archivos .env de api-gateway e inference-service.
--- Sólo se permiten conexiones desde la propia máquina (127.0.0.1 / localhost).
+-- y usa las mismas en los .env de api-gateway e inference-service (los que subes a la VM).
+-- Sólo se permiten conexiones desde la propia máquina (127.0.0.1 / localhost); la VM de Oracle Cloud
+-- llega por el túnel SSH inverso que abre el PC, así que para MySQL también es 127.0.0.1.
 -- =====================================================================
 
 -- Gateway: guarda y lee consultas

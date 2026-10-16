@@ -424,7 +424,7 @@ print("Probabilidad de stroke del ejemplo:", round(float(pipeline_final.predict_
 # %% [markdown]
 # ## 10. Exportación del modelo
 # Se guarda un **paquete** (diccionario) con el pipeline y todo lo que el microservicio necesita.
-# Copia `model_v1.joblib` a `inference-service/models/` en tu máquina local.
+# Sube `model_v1.joblib` a la VM de Oracle Cloud (ver `inference-service/models/README.md`).
 
 # %%
 paquete = {

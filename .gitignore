@@ -6,9 +6,8 @@
 *.pem
 *.key
 .firebaserc
-cloudflared/*.json
 
-# ---- Pesos del modelo: viven sólo en la máquina local ----
+# ---- Pesos del modelo: nunca en git (viven en la VM, montados en el contenedor) ----
 *.joblib
 !inference-service/models/README.md
 

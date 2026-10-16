@@ -1,0 +1,3 @@
+# Finales de línea fijos: cmd necesita CRLF en los .bat (goto/etiquetas) y bash en la VM necesita LF
+*.bat text eol=crlf
+*.sh  text eol=lf

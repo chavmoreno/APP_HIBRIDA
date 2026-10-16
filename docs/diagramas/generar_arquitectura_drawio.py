@@ -4,7 +4,8 @@ Uso:
     python docs/diagramas/generar_arquitectura_drawio.py
 
 Mantiene el estilo del diagrama original (fuente Recursive, sombras, colores) y refleja la arquitectura
-actual: microservicio de inferencia en Docker, model registry montado como volumen y flujo Kaggle → Colab.
+actual: contenedores en una VM de Oracle Cloud Always Free (Caddy + DuckDNS), MySQL de XAMPP en el PC de casa (túnel SSH inverso) y
+flujo Kaggle → Colab.
 """
 
 import pathlib
@@ -22,6 +23,7 @@ LOCAL = CONTENEDOR + "fillColor=#FDF4FF;strokeColor=#E879F9;"
 XAMPP = CONTENEDOR + "fillColor=#F0FDFA;strokeColor=#2DD4BF;" + "verticalAlign=bottom;spacingBottom=4;"  # Rótulo abajo: las flechas entran por arriba
 DOCKER = CONTENEDOR + "fillColor=#EFF6FF;strokeColor=#3B82F6;strokeWidth=2;"
 NUBE = CONTENEDOR + "fillColor=#FFFBEB;strokeColor=#F59E0B;"
+OCI = CONTENEDOR + "fillColor=#FFF7ED;strokeColor=#FB923C;"
 FLECHA = (
     "edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;startArrow=none;endArrow=block;endSize=8;"
     "jumpStyle=arc;jumpSize=12;strokeColor=#000000;strokeWidth=2;fontSize=13;labelBackgroundColor=#cccccc;"
@@ -54,12 +56,13 @@ def flecha(id_: str, origen: str, destino: str, texto: str = "", estilo: str = F
 
 
 # ---------------- Contenedores (se dibujan primero para quedar al fondo) ----------------
-caja("nube", "<b>Nube</b> (Google / Cloudflare)", 20, 0, 960, 360, NUBE)
-caja("local", "<b>Máquina local</b> (Windows)", 20, 390, 960, 560, LOCAL)
-caja("xampp", "<b>XAMPP</b> · MySQL (MariaDB), sólo 127.0.0.1:3306", 60, 690, 460, 220, XAMPP)
-caja("docker", "<b>Docker Desktop</b> · contenedor <i>stroke-inferencia</i><br>"
+caja("nube", "<b>Nube</b> (Google / DuckDNS)", 20, 0, 960, 360, NUBE)
+caja("vm", "<b>Oracle Cloud Always Free</b> · VM Ampere A1 (Ubuntu 24.04, ARM) · públicos: 22, 80, 443", 20, 390, 960, 450, OCI)
+caja("docker", "<b>Docker</b> · network_mode host · servicios internos sólo en 127.0.0.1<br>"
      "<font style='font-size:12px'>usuario sin privilegios · sólo lectura · restart: unless-stopped</font>",
-     600, 470, 340, 180, DOCKER)
+     40, 485, 920, 245, DOCKER)
+caja("local", "<b>PC de casa</b> (Windows) · lo único local", 20, 870, 960, 330, LOCAL)
+caja("xampp", "<b>XAMPP</b> · MySQL (MariaDB), sólo 127.0.0.1:3306", 60, 990, 460, 190, XAMPP)
 
 # ---------------- Nube ----------------
 caja("U", "Usuario (navegador)", 360, 40, 180, 45)
@@ -68,22 +71,27 @@ caja("FE", "<b>Frontend SPA</b> - Firebase Hosting<br>Nueva consulta / Históric
 caja("FA", "<b>Firebase Authentication</b><br>correo/contraseña o Google", 40, 255, 220, 70)
 caja("KG", "<b>Kaggle</b><br>stroke-prediction-dataset", 720, 30, 220, 55)
 caja("CO", "<b>Google Colab</b><br>EDA + preprocesamiento<br>+ entrenamiento", 720, 125, 220, 80)
-caja("CF", "<b>Cloudflare Tunnel</b><br>api.tudominio.com", 360, 270, 180, 60)
+caja("CF", "<b>DuckDNS</b><br>tu-app.duckdns.org", 360, 270, 180, 60)
 
-# ---------------- Máquina local ----------------
-caja("MW", "Middleware X-Request-ID<br>+ manejadores de excepciones", 340, 420, 220, 60)
-caja("API", "<b>API Gateway</b> FastAPI :8000<br>(HTTPS, nativo)", 340, 520, 220, 60)
-caja("FB", "Respaldo: archivo .log rotativo<br>si MySQL no responde", 60, 420, 220, 60)
-caja("MS", "<b>Microservicio inferencia</b> :8001<br>HTTPS · publicado sólo en 127.0.0.1", 630, 530, 280, 65)
-caja("MR", "<b>Model registry</b><br>inference-service/models/model_v1.joblib<br>(volumen de sólo lectura)",
-     630, 780, 280, 75)
-caja("DB2", "<b>consultas_db</b><br>consultas y resultados", 90, 745, 170, 130, BD)
-caja("DB4", "<b>errores_db</b><br>log de errores", 320, 745, 170, 130, BD)
+# ---------------- VM de Oracle Cloud ----------------
+caja("CFD", "<b>Caddy</b> :443 · Let's Encrypt", 360, 415, 180, 45)
+caja("MW", "Middleware X-Request-ID<br>+ manejadores de excepciones", 60, 530, 220, 60)
+caja("API", "<b>API Gateway</b> FastAPI :8000<br>(HTTPS)", 340, 530, 220, 60)
+caja("MS", "<b>Microservicio inferencia</b> :8001<br>HTTPS · healthcheck", 640, 530, 280, 65)
+caja("FB", "Respaldo: archivo .log rotativo<br>si MySQL no responde", 60, 640, 220, 60)
+caja("MR", "<b>Model registry</b><br>models/model_v1.joblib<br>(volumen de sólo lectura)", 340, 640, 280, 70)
+caja("AL", "<b>Worker de alertas</b><br>CRITICAL pendientes", 640, 640, 280, 60)
+caja("T", "<b>127.0.0.1:3306</b><br>extremo del túnel (sshd, usuario <i>tunel</i>)", 300, 760, 220, 60)
+caja("ADM", "<b>Telegram / correo</b><br>(servicios externos)", 640, 760, 280, 60)
+
+# ---------------- PC de casa ----------------
+caja("SSH", "<b>ssh -R</b> (tunel_mysql.bat)<br>ssh incluido en Windows", 300, 900, 220, 60)
+caja("DB2", "<b>consultas_db</b><br>consultas y resultados", 90, 1035, 170, 120, BD)
+caja("DB4", "<b>errores_db</b><br>log de errores", 320, 1035, 170, 120, BD)
 
 # ---------------- Fuera ----------------
-caja("ADM", "<b>Panel admin / alertas</b><br>críticos a correo o Telegram", 300, 980, 240, 70)
-caja("leyenda", "<b>Leyenda</b><br>── flujo principal<br>- - - errores / respaldo / copia manual del modelo",
-     620, 975, 330, 70, NOTA)
+caja("leyenda", "<b>Leyenda</b><br>── flujo principal<br>- - - errores / respaldo / subida manual del modelo",
+     560, 1220, 400, 70, NOTA)
 
 # ---------------- Flechas ----------------
 flecha("e1", "U", "FE", "HTTPS")
@@ -93,20 +101,21 @@ flecha("e3", "FE", "CF", "HTTPS + Bearer token", extra="exitX=0.4;exitY=1;entryX
 flecha("e4", "FE", "CF", "POST /api/errores<br>errores de JS", DISCONTINUA,
        puntos=[(620, 200), (620, 300)], extra="exitX=1;exitY=0.8;entryX=1;entryY=0.5;")
 flecha("e5", "KG", "CO", "kagglehub (sin descarga manual)")
-flecha("e6", "CO", "MR", "model_v1.joblib<br>(copia manual)", DISCONTINUA,
-       puntos=[(960, 165), (960, 817)], extra="exitX=1;exitY=0.5;entryX=1;entryY=0.5;", pos=-0.6)
-flecha("e7", "CF", "MW")
-flecha("e8", "MW", "API")
-flecha("e9", "API", "MS", extra="exitX=1;exitY=0.5;entryX=0;entryY=0.31;")
-flecha("e10", "MS", "MR", "lee los pesos", extra="exitX=0.5;exitY=1;entryX=0.5;entryY=0;")
-flecha("e11", "API", "DB2", "guarda consulta", puntos=[(450, 650), (175, 650)],
-       extra="exitX=0.5;exitY=1;entryX=0.5;entryY=0;", pos=-0.3)
-flecha("e12", "MW", "DB4", "Errores 4xx/5xx<br>sanitizados", puntos=[(300, 465), (300, 715), (405, 715)],
-       extra="exitX=0;exitY=0.75;entryX=0.5;entryY=0;", pos=0.25)
-flecha("e13", "MW", "FB", estilo=DISCONTINUA, extra="exitX=0;exitY=0.25;entryX=1;entryY=0.25;")
-flecha("e14", "MS", "DB4", "Errores de inferencia<br>vía host.docker.internal", DISCONTINUA,
-       puntos=[(580, 575), (580, 810)], extra="exitX=0;exitY=0.7;entryX=1;entryY=0.5;")
-flecha("e15", "DB4", "ADM", extra="exitX=0.5;exitY=1;entryX=0.5;entryY=0;")
+flecha("e6", "CO", "MR", "model_v1.joblib<br>(subida manual a la VM)", DISCONTINUA,
+       puntos=[(965, 165), (965, 745), (480, 745)], extra="exitX=1;exitY=0.5;entryX=0.5;entryY=1;", pos=-0.55)
+flecha("e7", "CF", "CFD", "HTTPS :443")
+flecha("e8", "CFD", "MW", "HTTPS 127.0.0.1:8000", puntos=[(450, 505), (170, 505)],
+       extra="exitX=0.5;exitY=1;entryX=0.5;entryY=0;")
+flecha("e9", "MW", "API")
+flecha("e10", "API", "MS", extra="exitX=1;exitY=0.5;entryX=0;entryY=0.46;")
+flecha("e11", "MS", "MR", "lee los pesos", puntos=[(780, 620), (480, 620)],
+       extra="exitX=0.5;exitY=1;entryX=0.5;entryY=0;")
+flecha("e12", "MW", "FB", estilo=DISCONTINUA, extra="exitX=0.5;exitY=1;entryX=0.5;entryY=0;")
+flecha("e13", "docker", "T", "MySQL: consultas, errores, alertas",
+       extra="exitX=0.402;exitY=1;entryX=0.5;entryY=0;")
+flecha("e14", "SSH", "T", "SSH cifrado<br>(conexión saliente del PC)", extra="exitX=0.5;exitY=0;entryX=0.5;entryY=1;")
+flecha("e15", "SSH", "xampp", "127.0.0.1:3306", extra="exitX=0.5;exitY=1;entryX=0.761;entryY=0;")
+flecha("e16", "AL", "ADM", extra="exitX=0.5;exitY=1;entryX=0.5;entryY=0;")
 
 xml = (
     '<mxfile host="app.diagrams.net">\n'

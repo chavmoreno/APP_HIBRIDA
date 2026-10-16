@@ -16,8 +16,9 @@ errores = ErrorLogger(_settings.errores_db_url, _settings.log_fallback_path, ori
 
 
 def ip_cliente(request: Request) -> str:
-    """IP real del cliente: Cloudflare la envía en CF-Connecting-IP (el túnel conecta desde localhost)."""
-    return request.headers.get("CF-Connecting-IP") or (request.client.host if request.client else "")
+    """IP real del cliente. Caddy la pone en X-Forwarded-For y uvicorn la aplica a request.client
+    (sólo confía en esa cabecera si llega desde 127.0.0.1, ver run.py): un cliente no puede falsificarla."""
+    return request.client.host if request.client else ""
 
 
 def hash_ip(ip: str) -> str:

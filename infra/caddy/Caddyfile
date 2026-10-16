@@ -1,0 +1,20 @@
+# =====================================================================
+# Caddy: única puerta pública de la VM (puertos 80 y 443).
+# - Obtiene y renueva solo el certificado de Let's Encrypt para el dominio de DuckDNS.
+# - Redirige http:// → https:// y reenvía al gateway por HTTPS en el loopback, verificando su certificado
+#   con la CA interna (nunca sin verificar).
+# DOMINIO y ACME_EMAIL vienen del archivo .env de la raíz (lo escribe infra/oracle/instalar_vm.sh).
+# =====================================================================
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMINIO} {
+	reverse_proxy https://127.0.0.1:8000 {
+		# Caddy reescribe X-Forwarded-For con la IP real; el gateway sólo lo acepta desde 127.0.0.1
+		transport http {
+			tls_server_name localhost
+			tls_trust_pool file /certs/rootCA.pem
+		}
+	}
+}

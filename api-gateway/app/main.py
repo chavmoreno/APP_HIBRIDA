@@ -1,4 +1,4 @@
-"""API Gateway (:8000): único punto de entrada público (vía Cloudflare Tunnel).
+"""API Gateway (:8000): único punto de entrada público (vía Caddy en la VM de Oracle).
 
 Responsabilidades:
 - Validar el ID token de Firebase de cada petición.
@@ -65,5 +65,5 @@ app.include_router(admin.router)
 
 @app.get("/api/health", tags=["Salud"], summary="Estado del gateway")
 def health() -> dict:
-    """Comprobación de vida usada por Cloudflare / monitoreo."""
+    """Comprobación de vida para monitoreo."""
     return {"estado": "ok"}

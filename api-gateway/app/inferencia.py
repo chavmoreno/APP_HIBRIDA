@@ -15,7 +15,7 @@ settings = get_settings()
 
 @lru_cache
 def _cliente() -> httpx.Client:
-    """Cliente reutilizable. Verifica el certificado TLS local con la CA de mkcert (nunca verify=False)."""
+    """Cliente reutilizable. Verifica el certificado TLS de la inferencia con la CA interna (nunca verify=False)."""
     verificar: str | bool = settings.inference_ca_bundle if os.path.isfile(settings.inference_ca_bundle) else True
     return httpx.Client(base_url=settings.inference_url, verify=verificar, timeout=settings.inference_timeout)
 

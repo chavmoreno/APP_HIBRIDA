@@ -319,7 +319,7 @@ paths:
       tags:
       - Salud
       summary: Estado del gateway
-      description: Comprobación de vida usada por Cloudflare / monitoreo.
+      description: Comprobación de vida para monitoreo.
       operationId: health_api_health_get
       responses:
         '200':
@@ -707,8 +707,8 @@ tags:
 - name: Salud
   description: Estado del servicio
 servers:
-- url: https://api.tudominio.com
-  description: Producción (Cloudflare Tunnel)
+- url: https://tu-app.duckdns.org
+  description: Producción (Caddy en Oracle Cloud)
 - url: https://localhost:8000
   description: Local
 security:

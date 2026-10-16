@@ -1,6 +1,6 @@
 # 🧠 Stroke Risk App — Predicción de riesgo de derrame cerebral
 
-Aplicación web híbrida (nube + máquina local) en la que el usuario ingresa sus datos de salud y obtiene la
+Aplicación web híbrida (nube + base de datos local) en la que el usuario ingresa sus datos de salud y obtiene la
 **probabilidad estimada de sufrir un derrame cerebral (stroke)**, con histórico de consultas.
 
 [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/chavmoreno/APP_HIBRIDA/blob/main/ml/stroke_prediction_colab.ipynb)
@@ -9,12 +9,12 @@ Aplicación web híbrida (nube + máquina local) en la que el usuario ingresa su
 
 ## Características
 
-- 🔒 **HTTPS exclusivo** de punta a punta (Firebase Hosting, Cloudflare Tunnel y TLS local con mkcert).
+- 🔒 **HTTPS exclusivo** de punta a punta (Firebase Hosting, Caddy + Let's Encrypt y TLS interno con CA propia en la VM).
 - 👤 **Firebase Authentication**: registro e inicio de sesión con correo/contraseña (con verificación de correo) o con Google (Gmail).
 - 🧪 **Modelo entrenado en Google Colab** con el dataset de Kaggle leído directamente con `kagglehub`; EDA,
   imputación **moda** (categóricas) / **mediana** (numéricas), comparación de modelos y probabilidades calibradas.
-- 🐳 **Pesos del modelo en un microservicio local en Docker** (FastAPI, `:8001`, publicado sólo en `127.0.0.1`; los pesos se montan como volumen, no van en la imagen).
-- 🗄️ **XAMPP / MySQL**: `consultas_db` (consultas y resultados) y `errores_db` (log de errores) con usuarios de privilegios mínimos.
+- ☁️ **Backend en Docker sobre Oracle Cloud Always Free** (VM ARM, **USD 0**): API Gateway, microservicio de inferencia (`:8001`, sólo `127.0.0.1`; los pesos se montan como volumen, no van en la imagen) y worker de alertas.
+- 🗄️ **XAMPP / MySQL en el PC de casa** (lo único local): `consultas_db` y `errores_db` con usuarios de privilegios mínimos, alcanzables desde la VM por un **túnel SSH inverso** que abre el propio PC (sin abrir puertos ni instalar nada).
 - 🗂️ **Frontend** con pestañas **Nueva consulta** e **Histórico**, páginas 404/401/500 y `ErrorBoundary`.
 - 🚨 **Log de errores centralizado** (gateway, inferencia y frontend) con `X-Request-ID`, respaldo en archivo rotativo y alertas de errores críticos por Telegram/correo.
 - 📘 **Swagger/OpenAPI** generado desde el código.
@@ -25,15 +25,23 @@ Aplicación web híbrida (nube + máquina local) en la que el usuario ingresa su
 flowchart LR
   U[Usuario] -->|HTTPS| FE[SPA React<br/>Firebase Hosting]
   FE -->|correo / Google| FA[Firebase Auth]
-  FE -->|HTTPS + Bearer| CF[Cloudflare Tunnel]
-  subgraph Local[Máquina local]
-    GW[API Gateway :8000] --> MS[Inferencia :8001<br/>contenedor Docker] --> MR[(model_v1.joblib)]
-    GW --> C[(consultas_db)]
-    GW --> E[(errores_db)]
-    MS --> E
-    E --> AL[Alertas Telegram / correo]
+  FE -->|HTTPS + Bearer| CF[Caddy :443<br/>tu-app.duckdns.org]
+  subgraph OCI[Oracle Cloud Always Free - VM con Docker]
+    GW[API Gateway :8000] --> MS[Inferencia :8001] --> MR[(model_v1.joblib)]
+    AL[Worker de alertas]
+    T[127.0.0.1:3306]
+  end
+  subgraph Casa[PC de casa]
+    C[(consultas_db)]
+    E[(errores_db)]
   end
   CF --> GW
+  GW --> T
+  MS --> T
+  AL --> T
+  T -.->|túnel SSH inverso| C
+  T -.-> E
+  AL --> TG[Telegram / correo]
   KG[Kaggle] --> CO[Google Colab] -.->|.joblib| MR
 ```
 
@@ -44,27 +52,31 @@ Detalle completo, flujos, seguridad y modelo de datos: **[docs/arquitectura.md](
 ```
 APP_HIBRIDA/
 ├── ml/                       # Notebook de Colab (EDA + entrenamiento) y conversor .py → .ipynb
-├── docker-compose.yml        # Contenedor del microservicio de inferencia
+├── docker-compose.yml        # Contenedores de la VM: inferencia, gateway y alertas
 ├── inference-service/        # Microservicio FastAPI :8001 + Dockerfile (model registry en models/)
-├── api-gateway/              # API pública FastAPI :8000: auth Firebase, consultas, errores, admin, alertas
+├── api-gateway/              # API pública FastAPI :8000 + Dockerfile: auth Firebase, consultas, errores, admin, alertas
 ├── frontend/                 # SPA React + Vite para Firebase Hosting
 ├── database/                 # Scripts SQL de consultas_db, errores_db y usuarios MySQL
-├── infra/                    # Plantilla de Cloudflare Tunnel e instrucciones de certificados (mkcert)
-├── scripts/                  # Arranque de servicios y exportación de OpenAPI
+├── infra/                    # oracle/instalar_vm.sh (prepara la VM), caddy/Caddyfile y certs/ (TLS interno)
+├── scripts/                  # Túnel de MySQL (Windows), utilidades de XAMPP y exportación de OpenAPI
 └── docs/                     # Arquitectura, manuales, modelo y Swagger (docs/api/)
 ```
 
 ## Inicio rápido
 
-1. **Entrenar** — abre el notebook en Colab (botón de arriba), *Ejecutar todo* y copia `model_v1.joblib` a `inference-service/models/`.
-2. **Bases de datos** — ejecuta `database/01…03_*.sql` en XAMPP (cambia antes las contraseñas).
-3. **Certificados** — `mkcert` en `infra/certs/` ([instrucciones](infra/certs/README.md)).
-4. **Inferencia (Docker)** — copia `inference-service/.env.example` → `.env` y ejecuta `docker compose up -d --build` en la raíz.
-5. **API Gateway** — en `api-gateway/`: `python -m venv .venv`, `pip install -r requirements.txt`, copia `.env.example` → `.env`, `python run.py`.
-6. **Túnel** — `cloudflared` con [`infra/cloudflared/config.yml.example`](infra/cloudflared/config.yml.example).
-7. **Frontend** — `cd frontend && npm ci`, `.env.example` → `.env.local`, `npm run deploy`.
+1. **Entrenar** — abre el notebook en Colab (botón de arriba) y *Ejecutar todo*: descarga `model_v1.joblib`.
+2. **Bases de datos (PC)** — ejecuta `database/01…03_*.sql` en XAMPP (cambia antes las contraseñas).
+3. **VM en Oracle Cloud Always Free** — Ampere A1 (1 OCPU, 6 GB) con Ubuntu 24.04 y puertos 80/443 abiertos.
+4. **Dominio** — subdominio gratuito en DuckDNS apuntando a la IP de la VM.
+   Sube con `scp` los `.env` y la cuenta de servicio de Firebase, clona el repo y ejecuta
+   `sudo bash infra/oracle/instalar_vm.sh "<llave pública del PC>" tu-app.duckdns.org tu-correo`.
+5. **Túnel de MySQL (PC)** — IP de la VM en `secrets\vm_ip.txt` y doble clic en `scripts\tunel_mysql.bat`.
+6. **Frontend** — desde Google Cloud Shell: `npm ci` y deploy a Firebase Hosting.
 
 Paso a paso completo: **[docs/manual_instalacion.md](docs/manual_instalacion.md)**.
+
+**Costo: USD 0.** VM, disco e IP pública en Oracle Cloud Always Free; dominio en DuckDNS; HTTPS de Let's Encrypt;
+Firebase en el plan Spark. Detalle en el manual, §12.
 
 ## Documentación
 
@@ -78,6 +90,8 @@ Paso a paso completo: **[docs/manual_instalacion.md](docs/manual_instalacion.md)
 
 ## Pruebas
 
+En Google Cloud Shell (no hace falta instalar nada en el PC):
+
 ```bash
 cd inference-service && pip install -r requirements-dev.txt && pytest
 cd api-gateway && pip install -r requirements-dev.txt && pytest
@@ -86,5 +100,5 @@ cd frontend && npm ci && npm run build
 
 ## Stack
 
-Python 3.11+ · FastAPI · scikit-learn 1.6.1 · Docker · SQLAlchemy · PyMySQL · firebase-admin ·
-React 19 · Vite 6 · Firebase JS SDK 11 · MariaDB de XAMPP · Cloudflare Tunnel · Google Colab · Kaggle.
+Python 3.12 · FastAPI · scikit-learn 1.6.1 · Docker · Oracle Cloud (Ampere A1) · SQLAlchemy · PyMySQL · firebase-admin ·
+React 19 · Vite 6 · Firebase JS SDK 11 · MariaDB de XAMPP · OpenSSH · Caddy · DuckDNS · Google Colab · Kaggle.

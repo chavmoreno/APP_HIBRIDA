@@ -21,7 +21,7 @@ SERVICIOS = {
 }
 # URL del servidor que aparecerá en el Swagger de cada servicio
 SERVIDORES = {
-    "openapi-gateway": [{"url": "https://api.tudominio.com", "description": "Producción (Cloudflare Tunnel)"},
+    "openapi-gateway": [{"url": "https://tu-app.duckdns.org", "description": "Producción (Caddy en Oracle Cloud)"},
                         {"url": "https://localhost:8000", "description": "Local"}],
     "openapi-inferencia": [{"url": "https://127.0.0.1:8001", "description": "Sólo loopback (uso interno)"}],
 }

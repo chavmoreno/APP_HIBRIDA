@@ -2,7 +2,7 @@
 
 | Archivo | Contenido |
 |---|---|
-| `openapi-gateway.yaml` / `.json` | API pública (`https://api.tudominio.com`): consultas, histórico, errores, admin |
+| `openapi-gateway.yaml` / `.json` | API pública (`https://tu-app.duckdns.org`): consultas, histórico, errores, admin |
 | `openapi-inferencia.yaml` / `.json` | Microservicio interno (`https://127.0.0.1:8001`): `/predict`, `/model/info`, `/health` |
 | `index.html` | Swagger UI que carga ambas especificaciones |
 
@@ -15,8 +15,8 @@ python -m http.server 8080
 ```
 
 También puedes pegar el YAML en https://editor.swagger.io.
-Durante el desarrollo, con `EXPONER_DOCS=true` en `api-gateway/.env`, el gateway sirve Swagger en vivo en `https://localhost:8000/docs`.
-El microservicio de inferencia siempre lo sirve en `https://127.0.0.1:8001/docs` (sólo accesible desde la máquina local).
+Con `EXPONER_DOCS=true` en `api-gateway/.env`, el gateway sirve Swagger en vivo en `https://tu-app.duckdns.org/docs` (déjalo en `false` en producción).
+El microservicio de inferencia siempre lo sirve en `https://127.0.0.1:8001/docs` (sólo accesible desde dentro de la VM).
 
 ## Regenerar las especificaciones
 

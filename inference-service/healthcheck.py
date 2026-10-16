@@ -9,7 +9,7 @@ import ssl
 import sys
 import urllib.request
 
-# Se valida el certificado con la CA de mkcert (nunca se desactiva la verificación TLS)
+# Se valida el certificado con la CA interna (nunca se desactiva la verificación TLS)
 contexto = ssl.create_default_context(cafile=os.environ.get("HEALTHCHECK_CA", "/certs/rootCA.pem"))
 url = f"https://localhost:{os.environ.get('PORT', '8001')}/health"
 
