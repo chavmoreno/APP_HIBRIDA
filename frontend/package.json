@@ -15,11 +15,14 @@
     "firebase": "11.8.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-router-dom": "7.6.0"
+    "react-router-dom": "7.18.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.4.1",
     "swagger-ui-dist": "5.17.14",
-    "vite": "6.3.5"
+    "vite": "6.4.4"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.6"
   }
 }
