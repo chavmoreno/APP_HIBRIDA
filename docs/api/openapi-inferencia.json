@@ -429,7 +429,7 @@
   "servers": [
     {
       "url": "https://127.0.0.1:8001",
-      "description": "Sólo loopback (uso interno)"
+      "description": "Sólo loopback de la VM (uso interno)"
     }
   ]
 }

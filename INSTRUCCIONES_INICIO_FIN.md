@@ -7,7 +7,7 @@ apagarla el resto del tiempo. Instalación completa: [`docs/manual_instalacion.m
 
 | Pieza | Dónde | Qué pasa si está apagada |
 |---|---|---|
-| Página web | Firebase Hosting (`https://app-hibrida-511815.web.app`) | Siempre disponible, no se apaga sola |
+| Página web y Swagger | Firebase Hosting (`https://app-hibrida-511815.web.app` y `/swagger/`) | Siempre disponibles, no se apagan solas |
 | API + modelo (contenedores Docker) | VM de Oracle (`https://stroke-salva.duckdns.org`) | La página carga, pero no puede predecir ni mostrar el histórico |
 | Base de datos | XAMPP en el PC | La API predice, pero **no guarda** consultas ni muestra el histórico |
 | Túnel de MySQL | Ventana de `scripts\tunel_mysql.bat` en el PC | Igual que si XAMPP estuviera apagado |

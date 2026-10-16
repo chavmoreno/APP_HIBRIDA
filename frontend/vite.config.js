@@ -1,4 +1,4 @@
-// Configuración de Vite. En desarrollo el servidor también usa HTTPS (certificados de mkcert).
+// Configuración de Vite. Si existen certificados en infra/certs (los genera la VM), `npm run dev` también usa HTTPS.
 import fs from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'

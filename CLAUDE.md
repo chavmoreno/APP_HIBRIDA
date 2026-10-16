@@ -25,22 +25,27 @@ Arquitectura completa: `docs/arquitectura.md`.
 | `infra/caddy/Caddyfile` | Única entrada pública: HTTPS de Let's Encrypt → gateway por HTTPS en el loopback |
 | `scripts/tunel_mysql.bat` | Túnel SSH inverso PC → VM para MySQL (usa el `ssh` de Windows) |
 | `frontend/src/` | `pages/`, `components/` (ErrorBoundary, ProtectedRoute, Layout), `services/api.js`, `context/AuthContext.jsx` |
+| `frontend/scripts/copiar_swagger.mjs` | `prebuild`: copia `docs/api` + Swagger UI a `public/swagger` → `https://app-hibrida-511815.web.app/swagger/` |
 | `database/*.sql` | Esquemas y usuarios MySQL |
-| `docs/api/` | OpenAPI generado: `python scripts/exportar_openapi.py` |
+| `docs/api/` | OpenAPI generado (`scripts/exportar_openapi.py`, se ejecuta en la VM: ver `docs/api/README.md`) + página Swagger UI |
+| `INSTRUCCIONES_INICIO_FIN.md` | Encender/apagar la app y costos |
+
+Despliegue real: API `https://stroke-salva.duckdns.org` (VM Oracle `159.54.154.188`, usuario `ubuntu`, llave
+`%USERPROFILE%\.ssh\stroke_admin`), web `https://app-hibrida-511815.web.app`, Firebase `app-hibrida-511815`.
 
 ## Comandos
 
 ```bash
-# Pruebas (no requieren Firebase, MySQL ni modelo real; en el PC no hay Python: usar Cloud Shell o la VM)
-cd inference-service && pytest
-cd api-gateway && pytest
-# Frontend
-cd frontend && npm run build
+# Pruebas (no requieren Firebase, MySQL ni modelo real). El PC no tiene Python/Node útiles: en la VM, con contenedores temporales
+docker run --rm -v "$PWD":/repo -w /repo/inference-service python:3.12.10-slim-bookworm sh -c "pip install -q -r requirements-dev.txt && pytest -q"
+docker run --rm -v "$PWD":/repo -w /repo/api-gateway python:3.12.10-slim-bookworm sh -c "pip install -q -r requirements-dev.txt && pytest -q"
+# Frontend (Cloud Shell o contenedor node:22): el prebuild copia el Swagger
+cd frontend && npm ci && npm run build
 # Contenedores (en la VM, desde la raíz del repo)
 docker compose up -d --build && docker compose ps   # stroke-inferencia debe quedar "healthy"
 # Regenerar notebook y Swagger tras cambiar código
 python ml/tools/py_to_ipynb.py ml/stroke_prediction_colab.py ml/stroke_prediction_colab.ipynb
-python scripts/exportar_openapi.py
+# OpenAPI: comando completo en docs/api/README.md (contenedor con las dependencias de ambos servicios)
 # Probar el notebook fuera de Colab con un CSV local
 STROKE_CSV=/ruta/stroke.csv MPLBACKEND=Agg python ml/stroke_prediction_colab.py
 ```
@@ -65,7 +70,8 @@ STROKE_CSV=/ruta/stroke.csv MPLBACKEND=Agg python ml/stroke_prediction_colab.py
 5. Consultas siempre filtradas por el `uid` del token, nunca por un valor enviado por el cliente.
 6. Nunca registrar valores clínicos, tokens ni IPs en claro en `errores_db` (usar `sanitizar` / `hash_ip`).
 7. `api-gateway/app/error_logger.py` e `inference-service/app/error_logger.py` son copias idénticas (servicios desplegables por separado): mantenlas sincronizadas.
-8. Nunca subir `.env`, `secrets/`, `*.pem`, `*.joblib`.
+8. Nunca subir `.env`, `secrets/`, `*.pem` ni llaves. `*.joblib` está ignorado, **salvo** `inference-service/models/model_v1.joblib`,
+   que se versiona a propósito (decisión del usuario) para que la VM lo reciba con `git clone`.
 9. Docker: pesos, certificados y secretos se **montan** (nunca `COPY` a la imagen); los contenedores usan
    `network_mode: host` y cada servicio escucha **sólo en `127.0.0.1`** (nunca `0.0.0.0`, nunca `ports:`), salvo Caddy en 80/443; corren como
    uid 10001 con `read_only`, `cap_drop: ALL` y `no-new-privileges`. Valores propios del contenedor (HOST, PORT, rutas

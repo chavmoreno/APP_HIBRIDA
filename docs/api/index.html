@@ -4,27 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Stroke Risk API · Swagger</title>
-  <!-- Swagger UI desde CDN con versión fija -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css" />
+  <!-- Swagger UI se sirve desde el mismo sitio (lo copia frontend/scripts/copiar_swagger.mjs): sin CDN externos -->
+  <link rel="stylesheet" href="swagger-ui.css" />
   <style>body { margin: 0; background: #fafafa; }</style>
 </head>
 <body>
   <div id="swagger-ui"></div>
-  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js"></script>
-  <script>
-    // Selector superior para alternar entre la API pública y el microservicio interno.
-    // Abre este archivo con un servidor local (p. ej. "python -m http.server" dentro de docs/api).
-    window.ui = SwaggerUIBundle({
-      urls: [
-        { url: 'openapi-gateway.yaml', name: 'API Gateway (pública)' },
-        { url: 'openapi-inferencia.yaml', name: 'Microservicio de inferencia (interno)' },
-      ],
-      dom_id: '#swagger-ui',
-      presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
-      layout: 'StandaloneLayout',
-      persistAuthorization: false, // No guarda el token en el navegador
-    })
-  </script>
+  <script src="swagger-ui-bundle.js"></script>
+  <script src="swagger-ui-standalone-preset.js"></script>
+  <!-- Inicialización en un archivo aparte: la CSP de Firebase Hosting no permite scripts en línea -->
+  <script src="swagger-init.js"></script>
 </body>
 </html>

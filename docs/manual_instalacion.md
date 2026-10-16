@@ -171,13 +171,16 @@ Cloud Shell es una terminal gratuita en el navegador con Node incluido: no insta
 1. Abre [shell.cloud.google.com](https://shell.cloud.google.com) con la cuenta de Google del proyecto de Firebase.
 2. ```bash
    git clone https://github.com/chavmoreno/APP_HIBRIDA.git && cd APP_HIBRIDA/frontend
-   cp .env.example .env.local && nano .env.local    # datos web de Firebase y VITE_API_URL=https://tu-app.duckdns.org
-   sed -i 's#https://tu-app.duckdns.org#https://TU-SUBDOMINIO.duckdns.org#' firebase.json   # CSP connect-src
+   cp .env.example .env.local && nano .env.local    # apiKey/appId de Firebase y VITE_API_URL=https://tu-app.duckdns.org
    cp .firebaserc.example .firebaserc && nano .firebaserc   # tu id de proyecto
-   npm ci
-   npx firebase-tools login --no-localhost
-   npm run build && npx firebase-tools deploy --only hosting
+   npm ci && npm run build        # el prebuild copia también el Swagger (docs/api) a /swagger
+   npx firebase-tools deploy --only hosting
    ```
+   Si el deploy pide autenticación: `npx firebase-tools login --no-localhost` (copia el código **completo** que
+   muestra la página y pégalo enseguida). Si usas otro dominio, cámbialo también en la CSP de `firebase.json`.
+3. Resultado: la app en `https://TU-PROYECTO.web.app` y el Swagger en `https://TU-PROYECTO.web.app/swagger/`.
+4. Para volver a publicar tras cambios: `cd APP_HIBRIDA && git pull && cd frontend && npm ci && npm run build &&
+   npx firebase-tools deploy --only hosting` (el `.env.local` se conserva en Cloud Shell).
 
 ## 10. Operación diaria
 

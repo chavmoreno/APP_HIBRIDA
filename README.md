@@ -7,6 +7,9 @@ Aplicación web híbrida (nube + base de datos local) en la que el usuario ingre
 
 > ⚠️ Herramienta educativa y orientativa. **No sustituye un diagnóstico médico.**
 
+**En línea:** app <https://app-hibrida-511815.web.app> · API <https://stroke-salva.duckdns.org/api/health> ·
+Swagger <https://app-hibrida-511815.web.app/swagger/> · Encender y apagar: [INSTRUCCIONES_INICIO_FIN.md](INSTRUCCIONES_INICIO_FIN.md)
+
 ## Características
 
 - 🔒 **HTTPS exclusivo** de punta a punta (Firebase Hosting, Caddy + Let's Encrypt y TLS interno con CA propia en la VM).
@@ -17,7 +20,7 @@ Aplicación web híbrida (nube + base de datos local) en la que el usuario ingre
 - 🗄️ **XAMPP / MySQL en el PC de casa** (lo único local): `consultas_db` y `errores_db` con usuarios de privilegios mínimos, alcanzables desde la VM por un **túnel SSH inverso** que abre el propio PC (sin abrir puertos ni instalar nada).
 - 🗂️ **Frontend** con pestañas **Nueva consulta** e **Histórico**, páginas 404/401/500 y `ErrorBoundary`.
 - 🚨 **Log de errores centralizado** (gateway, inferencia y frontend) con `X-Request-ID`, respaldo en archivo rotativo y alertas de errores críticos por Telegram/correo.
-- 📘 **Swagger/OpenAPI** generado desde el código.
+- 📘 **Swagger/OpenAPI** generado desde el código y publicado en <https://app-hibrida-511815.web.app/swagger/>.
 
 ## Arquitectura
 

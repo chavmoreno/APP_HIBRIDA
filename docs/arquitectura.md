@@ -65,6 +65,7 @@ flowchart TD
 | Respaldo de logs | `RotatingFileHandler` (5 × 5 MB) | Volúmenes Docker `gateway-logs` e `inferencia-logs` | `app/error_logger.py` |
 | Panel admin | Ruta `/admin` | Frontend + gateway | `api-gateway/app/routers/admin.py` |
 | Entrenamiento | Notebook Colab + `kagglehub` | Google Colab | `ml/` |
+| Documentación de la API | OpenAPI generado desde el código + Swagger UI | `https://app-hibrida-511815.web.app/swagger/` | `docs/api/`, `scripts/exportar_openapi.py` |
 
 ### 2.1 Despliegue
 
@@ -152,7 +153,7 @@ Detalle del modelo: [`modelo.md`](modelo.md).
 | Cabeceras | HSTS, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, CSP, `Cache-Control: no-store` en la API. |
 | CORS | Sólo orígenes `https://` de Firebase Hosting; sin cookies (`allow_credentials=false`). |
 | Privacidad en logs | Sanitización recursiva (oculta `authorization`, `token`, `password`…), truncado, IP como `SHA-256(sal:IP)`, sin valores clínicos en errores 422. |
-| Secretos | `.env`, cuenta de servicio de Firebase, certificados y `.joblib` en `.gitignore`; en la VM se suben a mano y quedan con permisos `600`/`640`. La llave de la CA interna se destruye tras firmar. |
+| Secretos | `.env`, cuenta de servicio de Firebase, certificados y llaves en `.gitignore` (el modelo `model_v1.joblib` sí se versiona: no es secreto); en la VM se suben a mano y quedan con permisos `600`/`640`. La llave de la CA interna se destruye tras firmar. |
 
 ## 5. Modelo de datos
 

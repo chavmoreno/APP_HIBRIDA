@@ -53,7 +53,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RespuestaError'
-          description: Unprocessable Content
+          description: Unprocessable Entity
         '503':
           content:
             application/json:
@@ -707,9 +707,7 @@ tags:
 - name: Salud
   description: Estado del servicio
 servers:
-- url: https://tu-app.duckdns.org
+- url: https://stroke-salva.duckdns.org
   description: Producción (Caddy en Oracle Cloud)
-- url: https://localhost:8000
-  description: Local
 security:
 - FirebaseIdToken: []

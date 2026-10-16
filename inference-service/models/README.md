@@ -7,7 +7,8 @@ carpeta **dentro de la VM de Oracle Cloud**:
 - `model_v1.metadata.json` — métricas y metadatos legibles.
 
 Esta carpeta se **monta en el contenedor** de inferencia como `/app/models` (sólo lectura): los pesos
-**no** se copian a la imagen Docker. Los `.joblib` están en `.gitignore`.
+**no** se copian a la imagen Docker. `model_v1.joblib` está versionado en el repositorio a propósito (así la VM lo
+recibe al clonar); cualquier otro `.joblib` queda ignorado por `.gitignore` y se sube a la VM a mano.
 
 Publicar una versión nueva:
 

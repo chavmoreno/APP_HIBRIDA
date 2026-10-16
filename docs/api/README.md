@@ -1,30 +1,49 @@
 # Documentación de la API (OpenAPI / Swagger)
 
-| Archivo | Contenido |
-|---|---|
-| `openapi-gateway.yaml` / `.json` | API pública (`https://tu-app.duckdns.org`): consultas, histórico, errores, admin |
-| `openapi-inferencia.yaml` / `.json` | Microservicio interno (`https://127.0.0.1:8001`): `/predict`, `/model/info`, `/health` |
-| `index.html` | Swagger UI que carga ambas especificaciones |
+## ¿Qué es Swagger?
+
+**OpenAPI** es el estándar para describir una API REST en un archivo (JSON o YAML): qué rutas tiene, qué datos
+recibe cada una, qué responde, sus códigos de error y cómo se autentica. **Swagger UI** es la página web que lee
+ese archivo y lo muestra como documentación interactiva: cada ruta se puede desplegar para ver sus esquemas y
+probarla con el botón **Try it out**.
+
+En este proyecto las especificaciones **se generan desde el código** (FastAPI las construye a partir de las rutas y
+los modelos Pydantic), así que siempre coinciden con lo que la API acepta de verdad.
 
 ## Ver el Swagger
 
+**En línea:** <https://app-hibrida-511815.web.app/swagger/> (se publica con el frontend en Firebase Hosting).
+Arriba a la derecha se elige la especificación: *API Gateway (pública)* o *Microservicio de inferencia (interno)*.
+
+Probar rutas desde la página (**Try it out**):
+
+- `GET /api/health` funciona sin autenticación.
+- El resto pide un **ID token de Firebase**: inicia sesión en la app, pulsa **F12 → Aplicación (Application) →
+  IndexedDB → firebaseLocalStorageDb → firebaseLocalStorage**, copia el valor de `stsTokenManager.accessToken`
+  (caduca en 1 hora), pulsa **Authorize** en Swagger y pégalo.
+- El microservicio de inferencia **no** se puede probar desde internet: sólo escucha dentro de la VM (por diseño).
+
+Sin publicar: pega `openapi-gateway.yaml` en <https://editor.swagger.io>.
+
+## Archivos
+
+| Archivo | Contenido |
+|---|---|
+| `openapi-gateway.yaml` / `.json` | API pública (`https://stroke-salva.duckdns.org`): consultas, histórico, errores, admin |
+| `openapi-inferencia.yaml` / `.json` | Microservicio interno (`https://127.0.0.1:8001`, sólo dentro de la VM): `/predict`, `/model/info`, `/health` |
+| `index.html`, `swagger-init.js` | Página de Swagger UI. `frontend/scripts/copiar_swagger.mjs` la copia a `frontend/public/swagger/` en cada `npm run build`, junto con Swagger UI (`swagger-ui-dist`), para servirla desde el mismo sitio |
+
+## Regenerar las especificaciones (tras cambiar rutas o esquemas)
+
+En el PC no hay Python con las dependencias; se hace en la VM con un contenedor temporal:
+
 ```bash
-cd docs/api
-python -m http.server 8080
-# abre http://localhost:8080  (servidor estático local, sólo lectura de la documentación)
+cd APP_HIBRIDA && git pull
+docker run --rm -v "$PWD":/repo -w /repo python:3.12.10-slim-bookworm sh -c \
+  "pip install -q -r inference-service/requirements.txt -r api-gateway/requirements.txt pyyaml && python scripts/exportar_openapi.py"
 ```
 
-También puedes pegar el YAML en https://editor.swagger.io.
-Con `EXPONER_DOCS=true` en `api-gateway/.env`, el gateway sirve Swagger en vivo en `https://tu-app.duckdns.org/docs` (déjalo en `false` en producción).
-El microservicio de inferencia siempre lo sirve en `https://127.0.0.1:8001/docs` (sólo accesible desde dentro de la VM).
-
-## Regenerar las especificaciones
-
-Las specs se generan desde el código (FastAPI), así nunca quedan desactualizadas:
-
-```bash
-python scripts/exportar_openapi.py
-```
+Luego sube los cambios de `docs/api/` a GitHub y vuelve a publicar el frontend (manual de instalación, §9).
 
 ## Resumen de endpoints
 

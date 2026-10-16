@@ -8,7 +8,7 @@ salud básicos. Es una herramienta **orientativa**: no es un diagnóstico médic
 
 ## 1. Crear una cuenta e iniciar sesión
 
-Abre la dirección de la aplicación (siempre empieza por `https://`).
+Abre <https://app-hibrida-511815.web.app> (siempre empieza por `https://`).
 
 **Con Google (Gmail):** pulsa **Continuar con Google** y elige tu cuenta.
 
@@ -51,7 +51,8 @@ Pulsa **Calcular riesgo**. A la derecha verás:
 | Moderado | 5 % – 15 % | Naranja |
 | Alto | 15 % o más | Rojo |
 
-Cada consulta se guarda automáticamente en tu histórico. **Limpiar** vacía el formulario.
+Cada consulta se guarda automáticamente en tu histórico (si en ese momento la base de datos está apagada, verás el
+resultado igual, pero la app avisará que no se guardó). **Limpiar** vacía el formulario.
 
 ## 3. Pestaña «Histórico»
 

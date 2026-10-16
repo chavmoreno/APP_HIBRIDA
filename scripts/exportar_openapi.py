@@ -1,6 +1,7 @@
 """Exporta la especificación OpenAPI (Swagger) de ambos servicios a docs/api/.
 
-Uso (con un entorno que tenga las dependencias de ambos servicios + PyYAML):
+Uso (con las dependencias de ambos servicios + PyYAML; en este proyecto se ejecuta en la VM con un
+contenedor temporal, ver docs/api/README.md):
     python scripts/exportar_openapi.py
 
 Cada servicio se importa en un subproceso porque los dos paquetes se llaman `app`.
@@ -21,9 +22,8 @@ SERVICIOS = {
 }
 # URL del servidor que aparecerá en el Swagger de cada servicio
 SERVIDORES = {
-    "openapi-gateway": [{"url": "https://tu-app.duckdns.org", "description": "Producción (Caddy en Oracle Cloud)"},
-                        {"url": "https://localhost:8000", "description": "Local"}],
-    "openapi-inferencia": [{"url": "https://127.0.0.1:8001", "description": "Sólo loopback (uso interno)"}],
+    "openapi-gateway": [{"url": "https://stroke-salva.duckdns.org", "description": "Producción (Caddy en Oracle Cloud)"}],
+    "openapi-inferencia": [{"url": "https://127.0.0.1:8001", "description": "Sólo loopback de la VM (uso interno)"}],
 }
 CODIGO = "import json; from app.main import app; print(json.dumps(app.openapi(), ensure_ascii=False))"
 

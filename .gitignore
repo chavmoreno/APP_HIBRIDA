@@ -35,3 +35,6 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+
+# ---- Swagger copiado en cada build del frontend (fuente: docs/api) ----
+frontend/public/swagger/
