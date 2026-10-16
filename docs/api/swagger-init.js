@@ -2,8 +2,8 @@
 // El selector superior alterna entre la API pública (gateway) y el microservicio interno de inferencia.
 window.ui = SwaggerUIBundle({
   urls: [
-    { url: 'openapi-gateway.json', name: 'API Gateway (pública)' },
-    { url: 'openapi-inferencia.json', name: 'Microservicio de inferencia (interno, sólo dentro de la VM)' },
+    { url: '/swagger/openapi-gateway.json', name: 'API Gateway (pública)' },
+    { url: '/swagger/openapi-inferencia.json', name: 'Microservicio de inferencia (interno, sólo dentro de la VM)' },
   ],
   dom_id: '#swagger-ui',
   presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],

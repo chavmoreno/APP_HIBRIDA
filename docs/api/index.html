@@ -4,15 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Stroke Risk API · Swagger</title>
-  <!-- Swagger UI se sirve desde el mismo sitio (lo copia frontend/scripts/copiar_swagger.mjs): sin CDN externos -->
-  <link rel="stylesheet" href="swagger-ui.css" />
+  <!-- Swagger UI se sirve desde el mismo sitio (lo copia frontend/scripts/copiar_swagger.mjs): sin CDN externos.
+       Rutas absolutas: Firebase sirve la página como /swagger (sin barra final) por cleanUrls. -->
+  <link rel="stylesheet" href="/swagger/swagger-ui.css" />
   <style>body { margin: 0; background: #fafafa; }</style>
 </head>
 <body>
   <div id="swagger-ui"></div>
-  <script src="swagger-ui-bundle.js"></script>
-  <script src="swagger-ui-standalone-preset.js"></script>
+  <script src="/swagger/swagger-ui-bundle.js"></script>
+  <script src="/swagger/swagger-ui-standalone-preset.js"></script>
   <!-- Inicialización en un archivo aparte: la CSP de Firebase Hosting no permite scripts en línea -->
-  <script src="swagger-init.js"></script>
+  <script src="/swagger/swagger-init.js"></script>
 </body>
 </html>
