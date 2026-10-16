@@ -84,6 +84,7 @@ Firebase en el plan Spark. Detalle en el manual, §12.
 |---|---|
 | [Arquitectura](docs/arquitectura.md) | Desarrolladores / arquitectura |
 | [Manual de instalación y despliegue](docs/manual_instalacion.md) | Quien instala y opera |
+| [Encender y apagar la app / costos](INSTRUCCIONES_INICIO_FIN.md) | Uso diario del proyecto |
 | [Manual de usuario](docs/manual_usuario.md) | Usuarios finales |
 | [Modelo de ML](docs/modelo.md) | Ciencia de datos |
 | [API — Swagger / OpenAPI](docs/api/README.md) | Integradores |
