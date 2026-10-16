@@ -20,8 +20,10 @@ que es donde normalmente corre XAMPP; las variantes de macOS/Linux van entre par
 
 1. Abre `ml/stroke_prediction_colab.ipynb` en Colab:
    *Archivo → Abrir notebook → GitHub →* `chavmoreno/APP_HIBRIDA` (o sube el `.ipynb`).
-2. (Opcional) Si Kaggle pide autenticación: kaggle.com → *Settings → API → Create New Token*.
-   En Colab, panel **🔑 Secrets**, crea `KAGGLE_USERNAME` y `KAGGLE_KEY` y activa el acceso del notebook.
+2. (Opcional, el dataset es público) Si Kaggle pide autenticación: kaggle.com → *Settings → API →
+   Generate New Token*. Kaggle muestra el **API Token una sola vez**: cópialo. En Colab, panel **🔑 Secrets**,
+   crea un secreto llamado `KAGGLE_API_TOKEN` con ese valor y activa *Acceso al notebook*.
+   (Con un `kaggle.json` antiguo también sirven los secretos `KAGGLE_USERNAME` y `KAGGLE_KEY`.)
 3. *Entorno de ejecución → Ejecutar todo*. Al final se descargan `model_v1.joblib` y `model_v1.metadata.json`.
 4. Copia ambos archivos a `inference-service/models/`.
 

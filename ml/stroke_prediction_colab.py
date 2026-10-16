@@ -110,8 +110,13 @@ print("scikit-learn:", sklearn.__version__, "| pandas:", pd.__version__)
 # `kagglehub.load_dataset` lee el CSV de Kaggle y lo entrega como `DataFrame`;
 # no hace falta descargar el archivo manualmente ni subirlo a Colab.
 #
-# Si Kaggle pide autenticación, en Colab abre el panel **🔑 Secrets** y crea
-# `KAGGLE_USERNAME` y `KAGGLE_KEY` (los obtienes en kaggle.com → Settings → API → Create New Token).
+# El dataset es público, así que normalmente no hace falta autenticarse. Si Kaggle la pide:
+# 1. kaggle.com → tu foto → **Settings** → sección **API** → **Generate New Token** (o *Create New Token*).
+#    Kaggle muestra el token **una sola vez**: cópialo.
+# 2. En Colab abre el panel **🔑 Secrets**, crea un secreto llamado `KAGGLE_API_TOKEN`, pega el token
+#    y activa *Acceso al notebook*.
+#
+# (Si tienes un `kaggle.json` antiguo, también sirven los secretos `KAGGLE_USERNAME` y `KAGGLE_KEY`.)
 # La celda los lee automáticamente.
 
 # %%
@@ -120,7 +125,8 @@ def configurar_credenciales_kaggle() -> None:
     try:
         from google.colab import userdata  # Sólo existe dentro de Colab
 
-        for clave in ("KAGGLE_USERNAME", "KAGGLE_KEY"):
+        # KAGGLE_API_TOKEN: token nuevo de Kaggle. KAGGLE_USERNAME/KAGGLE_KEY: credenciales antiguas (kaggle.json)
+        for clave in ("KAGGLE_API_TOKEN", "KAGGLE_USERNAME", "KAGGLE_KEY"):
             try:
                 valor = userdata.get(clave)  # Lanza excepción si el secreto no existe
                 if valor:
