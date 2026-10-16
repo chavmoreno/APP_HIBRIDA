@@ -1,6 +1,10 @@
 # Arquitectura
 
-Documento de arquitectura de **Stroke Risk App**. Fuente del diagrama original: `Arquitectura.drawio` en Google Drive.
+Documento de arquitectura de **Stroke Risk App**.
+
+Diagrama editable en draw.io: [`docs/diagramas/Arquitectura.drawio`](diagramas/Arquitectura.drawio)
+(se regenera con `python docs/diagramas/generar_arquitectura_drawio.py`; copia también en Google Drive como
+*Arquitectura v2 (Docker).drawio*). El diagrama siguiente es la misma vista en Mermaid.
 
 ## 1. Vista general
 
